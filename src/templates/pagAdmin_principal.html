@@ -16,18 +16,19 @@
         </div>
         <nav>
             <ul>
-                <li><a href="#usuarios">Usuarios</a></li>
-                <li><a href="#productos">Productos</a></li>
+                <li><a href="{{ url_for('admin.indexAdmin') }}">Usuarios</a></li>
+                <li><a href="#">Productos</a></li>
                 <li><a href="#bebidas">Bebidas</a></li>
                 <a href="{{ url_for('mesasyboxes.obtener_mesasyboxes') }}">Mesas y Boxes</a>
-                <li><a href="#piqueos">Piqueos y Cocteles</a></li>
+                <li><a href="{{ url_for('productos.index') }}">Piqueos y Cocteles</a></li>
                 <li><a href="#promociones">Promociones</a></li>
-                <li><a href="#servicios">Servicios</a></li>
+                <li><a href="{{ url_for('servicios.index') }}">Servicios</a></li>
                 <li><a href="#eventos">Eventos</a></li>
                 <li><a href="#artistas">Artistas</a></li>
                 <li><a href="#imagenes">Imágenes</a></li>
                 <li><a href="#videos">Videos</a></li>
                 <li><a href="#redes-sociales">Redes Sociales</a></li>
+                <li><a href="{{ url_for('categorias.index') }}">Categoría</a></li>
             </ul>
         </nav>
     </div>
