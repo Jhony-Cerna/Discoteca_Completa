@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Servicios</title>
+    <title>Discotecas</title>
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
 </head>
 
@@ -14,30 +14,29 @@
             style="text-decoration: underline;">Discoteca</a>
     </nav>
     <div class="container mt-5">
-        <h1 class="mb-4">Lista de Servicios</h1>
-        <a href="{{ url_for('servicios.add_servicio') }}" class="btn btn-success mb-3">Agregar Nuevo Servicio</a>
+        <h1 class="mb-4">Lista de Discotecas</h1>
         <table class="table table-bordered">
             <thead>
                 <tr>
-                    <th>N° Orden</th>
-                    <th>ID Discoteca</th>
+                    <th>ID</th>
                     <th>Nombre</th>
-                    <th>Descripción</th>
-                    <th>Acciones</th>
+                    <th>Dirección</th>
+                    <th>Distrito</th>
+                    <th>Teléfono</th>
+                    <th>Información</th>
                 </tr>
             </thead>
             <tbody>
-                {% for servicio in servicios %}
+                {% for discoteca in discotecas %}
                 <tr>
-                    <td>{{ servicio[0] }}</td>
-                    <td>{{ servicio[3] }}</td>
-                    <td>{{ servicio[2] }}</td>
-                    <td>{{ servicio[1] }}</td>
+                    <td>{{ discoteca.id_discoteca }}</td>
+                    <td>{{ discoteca.nombre }}</td>
+                    <td>{{ discoteca.direccion }}</td>
+                    <td>{{ discoteca.distrito }}</td>
+                    <td>{{ discoteca.telefono }}</td>
                     <td>
-                        <a href="{{ url_for('servicios.update_servicio', id=servicio[0]) }}"
-                            class="btn btn-primary btn-sm">Editar</a>
-                        <a href="{{ url_for('servicios.delete_servicio', id=servicio[0]) }}"
-                            class="btn btn-danger btn-sm">Eliminar</a>
+                        <a href="{{ url_for('discoteca_info.edit_discoteca', id=discoteca.id_discoteca) }}"
+                            class="btn btn-primary btn-sm">Info</a>
                     </td>
                 </tr>
                 {% endfor %}

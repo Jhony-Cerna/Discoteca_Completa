@@ -1,12 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Categorías</title>
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
 </head>
+
 <body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="{{ url_for('main.pag_admin_principal') }}"
+            style="text-decoration: underline;">Discoteca</a>
+    </nav>
     <div class="container mt-5">
         <h1 class="mb-4">Lista de Categorías de Bebidas</h1>
         <a href="{{ url_for('categorias.add_categoria') }}" class="btn btn-success mb-3">Agregar Nueva Categoría</a>
@@ -26,8 +32,11 @@
                     <td>{{ categoria[1] }}</td>
                     <td>{{ categoria[2] }}</td>
                     <td>
-                        <a href="{{ url_for('categorias.update_categoria', id=categoria[0]) }}" class="btn btn-primary btn-sm">Editar</a>
-                        <a href="{{ url_for('categorias.delete_categoria', id=categoria[0]) }}" class="btn btn-danger btn-sm" onclick="return confirm('¿Estás seguro de que deseas eliminar este producto?');">Eliminar</a>
+                        <a href="{{ url_for('categorias.update_categoria', id=categoria[0]) }}"
+                            class="btn btn-primary btn-sm">Editar</a>
+                        <a href="{{ url_for('categorias.delete_categoria', id=categoria[0]) }}"
+                            class="btn btn-danger btn-sm"
+                            onclick="return confirm('¿Estás seguro de que deseas eliminar este producto?');">Eliminar</a>
                     </td>
                 </tr>
                 {% endfor %}
@@ -38,4 +47,5 @@
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
+
 </html>

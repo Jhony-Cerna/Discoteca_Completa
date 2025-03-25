@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Discoteca</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="{{ url_for('main.pag_admin_principal') }}"
+            style="text-decoration: underline;">Discoteca</a>
+    </nav>
+    <div class="container mt-5">
+        <h1 class="mb-4">Editar Discoteca</h1>
+        <h3>{{ discoteca.nombre }}</h3>
+        <form method="POST">
+            <div class="form-group">
+                <label for="dias">Días:</label>
+                <input type="text" class="form-control" id="dias" name="dias" value="{{ discoteca.dias }}" required>
+            </div>
+            <div class="form-group">
+                <label for="horario">Horario:</label>
+                <input type="text" class="form-control" id="horario" name="horario" value="{{ discoteca.horario }}"
+                    required>
+            </div>
+            <div class="form-group">
+                <label for="descripcion">Descripción:</label>
+                <textarea class="form-control" id="descripcion" name="descripcion"
+                    required>{{ discoteca.descripcion }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="genero">Género:</label>
+                <input type="text" class="form-control" id="genero" name="genero" value="{{ discoteca.generos_musica }}"
+                    required>
+            </div>
+            <div class="form-group">
+                <label for="latitud">Latitud:</label>
+                <input type="text" class="form-control" id="latitud" name="latitud"
+                    value="{{ discoteca.ubicacion_latitud }}" required>
+            </div>
+            <div class="form-group">
+                <label for="longitud">Longitud:</label>
+                <input type="text" class="form-control" id="longitud" name="longitud"
+                    value="{{ discoteca.ubicacion_longitud }}" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+        </form>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+
+</html>
