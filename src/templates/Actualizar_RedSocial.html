@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Red Social</title>
+    <link rel="stylesheet" href="../static/CSS/Red_social.css">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="form-container">
+            <h2>Editar Red Social</h2>
+            <form action="{{ url_for('actualizar_red_social', id_link=red_social.id_link) }}" method="POST">
+                <input type="hidden" name="id_artista" value="{{ red_social.id_referencia }}">
+            
+                <!-- Nombre de referencia -->
+                <div class="form-group">
+                    <label for="nombre_referencia">Nombre de referencia:</label>
+                    <input type="text" class="form-control" id="nombre_referencia" name="nombre_referencia" value="{{ red_social.nombre_referencia }}" required>
+                </div>
+            
+                <!-- Tipo de Red Social -->
+                <div class="form-group">
+                    <label for="tipo_link">Tipo de Red Social:</label>
+                    <select class="form-control" id="tipo_link" name="tipo_link" required>
+                        <option value="Facebook" {% if red_social.tipo_link == 'Facebook' %}selected{% endif %}>Facebook</option>
+                        <option value="Instagram" {% if red_social.tipo_link == 'Instagram' %}selected{% endif %}>Instagram</option>
+                        <option value="Twitter" {% if red_social.tipo_link == 'Twitter' %}selected{% endif %}>Twitter</option>
+                    </select>
+                </div>
+            
+                <!-- URL -->
+                <div class="form-group">
+                    <label for="url">URL:</label>
+                    <input type="url" class="form-control" id="url" name="url" value="{{ red_social.url }}" required>
+                </div>
+            
+                <!-- Descripción -->
+                <div class="form-group">
+                    <label for="descripcion">Descripción:</label>
+                    <textarea class="form-control" id="descripcion" name="descripcion">{{ red_social.descripcion }}</textarea>
+                </div>
+            
+                <button type="submit" class="btn btn-success">Guardar Cambios</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

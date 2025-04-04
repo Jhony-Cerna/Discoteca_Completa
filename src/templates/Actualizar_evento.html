@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Actualizar Evento</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/Agregar_evento.css') }}">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center mb-4">Actualizar Evento</h1>
+
+        <!-- Mensajes Flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Cerrar">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form action="{{ url_for('eventos.editar_evento', nombre_evento=evento.nombre_evento) }}" method="POST">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="nombre">Nombre del Evento:</label>
+                        <input type="text" class="form-control" id="nombre" name="nombre" 
+                                value="{{ evento.nombre_evento }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="descripcion">Descripción:</label>
+                        <textarea class="form-control" id="descripcion" name="descripcion" 
+                                    rows="3" required>{{ evento.descripcion }}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="direccion">Dirección:</label>
+                        <input type="text" class="form-control" id="direccion" name="direccion" 
+                                value="{{ evento.lugar }}" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="fecha">Fecha:</label>
+                        <input type="date" class="form-control" id="fecha" name="fecha" 
+                                value="{{ evento.fecha.strftime('%Y-%m-%d') }}" min="{{ min_date }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="hora">Hora:</label>
+                        <input type="time" class="form-control" id="hora" name="hora" 
+                                value="{{ evento.hora.strftime('%H:%M') }}" required>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4">
+                <h2>Seleccionar Artista</h2>
+                <div class="row">
+                    <div class="col-md-8">
+                        <select class="form-control" id="artista">
+                            <option value="">-- Seleccione un Artista --</option>
+                            {% for artista in artistas %}
+                                <option value="{{ artista.id_artista }}">
+                                    {{ artista.nombre }} - {{ artista.genero_musical }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="button" class="btn btn-primary" id="agregar-artista">Agregar</button>
+                        <a href="{{ url_for('artistas.crear_artista') }}" class="btn btn-success">Crear Artista</a>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4">
+                <h2>Artistas Seleccionados</h2>
+                <table class="table table-bordered" id="tabla-artistas">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Género</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for artista in artistas_asignados %}
+                            <tr data-id="{{ artista.id_artista }}">
+                                <td>{{ artista.nombre }}</td>
+                                <td>{{ artista.genero_musical }}</td>
+                                <td>
+                                    <button type="button" class="btn btn-warning btn-sm btn-editar">Editar</button>
+                                    <button type="button" class="btn btn-danger btn-sm btn-eliminar">Eliminar</button>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="3" class="text-center">No hay artistas seleccionados</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <input type="hidden" name="artistas" id="artistas-seleccionados" 
+                    value="{{ artistas_asignados | map(attribute='id_artista') | list | tojson }}">
+            <!--<input type="hidden" name="artistas_eliminados" id="artistas-eliminados" value="[]"> -->
+
+            <div class="text-center mt-4">
+                <button type="submit" class="btn btn-primary">Actualizar Evento</button>
+            </div>
+        </form>
+    </div>
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+    const artistasInput = document.getElementById('artistas-seleccionados');
+    let artistasSeleccionados = new Set();
+
+    // Cargar datos iniciales y asegurar que sean números
+    try {
+        const initialArtistas = JSON.parse(artistasInput.value || "[]");
+        initialArtistas.forEach(id => artistasSeleccionados.add(parseInt(id)));
+    } catch (error) {
+        console.error("Error al analizar JSON:", error);
+    }
+
+    const actualizarHiddenInput = () => {
+        artistasInput.value = JSON.stringify(Array.from(artistasSeleccionados));
+    };
+
+    // Función para asignar eventos a botones
+    const asignarEventos = (element) => {
+        // Evento para editar
+        element.querySelector('.btn-editar').addEventListener('click', function() {
+            const row = this.closest('tr');
+            const artistaId = parseInt(row.dataset.id);
+            const nextUrl = encodeURIComponent(window.location.href);
+            window.location.href = `/artistas/actualizar/${artistaId}?next=${nextUrl}`;
+        });
+
+        // Evento para eliminar
+        element.querySelector('.btn-eliminar').addEventListener('click', function() {
+            const row = this.closest('tr');
+            const artistaId = parseInt(row.dataset.id);
+            
+            artistasSeleccionados.delete(artistaId);
+            row.remove();
+            actualizarHiddenInput();
+        });
+    };
+
+    // Asignar eventos a artistas existentes
+    document.querySelectorAll('#tabla-artistas tbody tr').forEach(row => {
+        asignarEventos(row);
+    });
+
+    // Agregar nuevos artistas
+    document.getElementById('agregar-artista').addEventListener('click', function() {
+        const select = document.getElementById('artista');
+        const selectedOption = select.options[select.selectedIndex];
+        const artistaId = parseInt(selectedOption.value);
+
+        if (artistaId && !artistasSeleccionados.has(artistaId)) {
+            artistasSeleccionados.add(artistaId);
+            
+            const row = document.createElement('tr');
+            row.dataset.id = artistaId;
+            row.innerHTML = `
+                <td>${selectedOption.text.split(' - ')[0]}</td>
+                <td>${selectedOption.text.split(' - ')[1]}</td>
+                <td>
+                    <button type="button" class="btn btn-warning btn-sm btn-editar">Editar</button>
+                    <button type="button" class="btn btn-danger btn-sm btn-eliminar">Eliminar</button>
+                </td>
+            `;
+
+            document.querySelector('#tabla-artistas tbody').appendChild(row);
+            asignarEventos(row);
+            actualizarHiddenInput();
+        }
+    });
+
+    // Inicializar valores
+    actualizarHiddenInput();
+});
+
+
+    </script>
+</body>
+</html>

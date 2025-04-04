@@ -1,3 +1,4 @@
+import os
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from src.database.db_mysql import db
 
@@ -24,7 +25,7 @@ class Espacio(db.Model):
     ubicacion = db.Column(db.String(255), nullable=True)
     reserva = db.Column(db.Float, nullable=False)
 
-@mesasyboxes_bp.route('/mesas_y_cajas', methods=['GET'])
+@mesasyboxes_bp.route('/', methods=['GET'])
 def obtener_mesasyboxes():
     """Obtiene todos los productos y sus espacios y los muestra en una plantilla HTML."""
     productos = Producto.query.all()
@@ -99,7 +100,7 @@ def agregar_mesasyboxes():
         flash("Producto y espacio agregados exitosamente.", "success")
         return redirect(url_for('mesasyboxes.obtener_mesasyboxes'))
 
-@mesasyboxes_bp.route('/mesas_y_cajas/editar/<int:id_producto>', methods=['GET'])
+@mesasyboxes_bp.route('/editar/<int:id_producto>', methods=['GET'])
 def editar_mesasybox(id_producto):
     """Carga la página de edición con los datos del producto y su espacio."""
     producto = Producto.query.get(id_producto)
@@ -108,11 +109,13 @@ def editar_mesasybox(id_producto):
 
     espacio = Espacio.query.filter_by(id_producto=id_producto).first()
 
+    print("Producto:", producto)
+    print("Espacio:", espacio)  # Verificar si el espacio se obtiene
+
     return render_template('Actualizar_Box.html', producto=producto, espacio=espacio)
 
 
-
-@mesasyboxes_bp.route('/mesas_y_cajas/<int:id_producto>', methods=['GET'])
+@mesasyboxes_bp.route('/<int:id_producto>', methods=['GET'])
 def obtener_mesasybox(id_producto):
     """Obtiene un producto y su espacio específico por su ID."""
     producto = Producto.query.get(id_producto)
@@ -136,45 +139,104 @@ def obtener_mesasybox(id_producto):
     }
     return jsonify(resultado), 200
 
-@mesasyboxes_bp.route('/mesas_y_cajas/<int:id_producto>', methods=['PUT'])
+
+@mesasyboxes_bp.route('/editar/<int:id_producto>', methods=['POST'])
 def actualizar_mesasybox(id_producto):
-    """Actualiza un producto y su espacio existente."""
-    producto = Producto.query.get(id_producto)
-    if producto is None:
-        return jsonify({"error": "Producto no encontrado."}), 404
+    """Actualiza el producto y su espacio."""
+    if request.form.get('_method') == 'PUT':
+        try:
+            # Obtener datos del formulario
+            data = request.form
 
-    data = request.get_json()
-    producto.tipo = data.get('tipo', producto.tipo)
-    producto.nombre = data.get('nombre', producto.nombre)
-    producto.descripcion = data.get('descripcion', producto.descripcion)
-    producto.precio_regular = data.get('precio_regular', producto.precio_regular)
-    producto.promocion = data.get('promocion', producto.promocion)
+            # Buscar el producto y su espacio
+            producto = Producto.query.get_or_404(id_producto)
+            espacio = Espacio.query.filter_by(id_producto=id_producto).first()
 
-    # Actualizar el espacio si existe
-    espacio = Espacio.query.filter_by(id_producto=id_producto).first()
-    if espacio:
-        espacio.capacidad = data.get('capacidad', espacio.capacidad)
-        espacio.tamanio = data.get('tamanio', espacio.tamanio)
-        espacio.contenido = data.get('contenido', espacio.contenido)
-        espacio.estado = data.get('estado', espacio.estado)
-        espacio.reserva = data.get('reserva', espacio.reserva)
+            # Actualizar campos del producto
+            producto.tipo = data.get('tipo', producto.tipo)
+            producto.nombre = data.get('nombre', producto.nombre)
+            producto.descripcion = data.get('descripcion', producto.descripcion)
+            producto.precio_regular = float(data.get('precio_regular', producto.precio_regular))
+            producto.promocion = 'promocion' in data  # Checkbox
 
-    db.session.commit()
-    return jsonify({"mensaje": "Producto y espacio actualizados exitosamente."}), 200
+            # Actualizar campos del espacio (si existe)
+            if espacio:
+                espacio.capacidad = int(data.get('capacidad', espacio.capacidad))
+                espacio.tamanio = data.get('tamanio', espacio.tamanio)
+                espacio.contenido = data.get('contenido', espacio.contenido)
+                espacio.estado = data.get('estado', espacio.estado)
 
-@mesasyboxes_bp.route('/mesas_y_cajas/<int:id_producto>', methods=['DELETE'])
+                # Manejar reserva
+                if 'reserva' in data:  # Checkbox marcado
+                    reserva_precio = data.get('reserva_precio', '0')
+                    try:
+                        espacio.reserva = float(reserva_precio) if reserva_precio else None
+                    except ValueError:
+                        flash("El precio de reserva debe ser un número válido", "error")
+                        return redirect(url_for('mesasyboxes.obtener_mesasyboxes'))
+                else:  # Checkbox desmarcado
+                    espacio.reserva = None  # Guardar como NULL (N/A)
+
+            # Guardar cambios en la base de datos
+            db.session.commit()
+            flash("Producto actualizado correctamente", "success")
+            return redirect(url_for('mesasyboxes.obtener_mesasyboxes'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error al actualizar: {str(e)}", "error")
+            return redirect(url_for('mesasyboxes.obtener_mesasyboxes'))
+
+
+@mesasyboxes_bp.route('/eliminar/<int:id_producto>', methods=['POST'])
 def eliminar_mesasybox(id_producto):
-    """Elimina un producto y su espacio por su ID."""
-    producto = Producto.query.get(id_producto)
-    if producto is None:
-        return jsonify({"error": "Producto no encontrado."}), 404
+    if request.json.get('_method') == 'DELETE':
+        try:
+            producto = Producto.query.get_or_404(id_producto)
+            espacio = Espacio.query.filter_by(id_producto=id_producto).first()
 
-    # Eliminar el espacio relacionado
-    espacio = Espacio.query.filter_by(id_producto=id_producto).first()
-    if espacio:
-        db.session.delete(espacio)
+            if espacio:
+                db.session.delete(espacio)
+            db.session.delete(producto)
+            
+            db.session.commit()
+            return jsonify(success=True), 200
 
-    db.session.delete(producto)
-    db.session.commit()
-    return jsonify({"mensaje": "Producto y espacio eliminados exitosamente."}), 200
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error en la base de datos: {str(e)}")
+            return jsonify(success=False, error=str(e)), 500
+        
+
+
+@mesasyboxes_bp.route('/filtrar/<tipo>', methods=['GET'])
+def filtrar_por_tipo(tipo):
+    """Filtra los productos por tipo (box o mesa)."""
+    productos_filtrados = Producto.query.filter_by(tipo=tipo).all()
+    resultado = []
+
+    for producto in productos_filtrados:
+        espacio = Espacio.query.filter_by(id_producto=producto.id_producto).first()
+        resultado.append({
+            'id_producto': producto.id_producto,
+            'tipo': producto.tipo,
+            'nombre': producto.nombre,
+            'descripcion': producto.descripcion,
+            'precio_regular': producto.precio_regular,
+            'promocion': producto.promocion,
+            'capacidad': espacio.capacidad if espacio else None,
+            'tamanio': espacio.tamanio if espacio else None,
+            'contenido': espacio.contenido if espacio else None,
+            'estado': espacio.estado if espacio else None,
+            'ubicacion': espacio.ubicacion if espacio else None,
+            'reserva': espacio.reserva if espacio else None
+        })
+
+    return render_template('index.html', productos=resultado, tipo_filtro=tipo)
+
+
+
+
+
+
 

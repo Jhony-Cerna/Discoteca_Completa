@@ -85,3 +85,8 @@ button:hover {
             max-height: 100%;
             object-fit: cover; /* Ajustar la imagen dentro del contenedor */
         }
+
+/* En tu archivo CSS */
+.hidden {
+    display: none;
+}

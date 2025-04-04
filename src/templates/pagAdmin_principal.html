@@ -18,13 +18,13 @@
             <ul>
                 <li><a href="#usuarios">Usuarios</a></li>
                 <li><a href="#productos">Productos</a></li>
-                <li><a href="#bebidas">Bebidas</a></li>
-                <a href="{{ url_for('mesasyboxes.obtener_mesasyboxes') }}">Mesas y Boxes</a>
+                <li><a href="{{ url_for('bebidas.listar_bebidas') }}" class="btn btn-primary">Bebidas</a></li>
+                <li><a href="{{ url_for('mesasyboxes.obtener_mesasyboxes') }}">Mesas y Boxes</a></li>
                 <li><a href="#piqueos">Piqueos y Cocteles</a></li>
-                <li><a href="#promociones">Promociones</a></li>
+                <li><a href="{{ url_for('promociones.lista_promociones') }}" class="btn btn-primary">Promociones</a></li>
                 <li><a href="#servicios">Servicios</a></li>
-                <li><a href="#eventos">Eventos</a></li>
-                <li><a href="#artistas">Artistas</a></li>
+                <li><a href="{{ url_for('eventos.eventos_tabla') }}">Eventos</a></li>
+                <li><a href="{{ url_for('artistas.artistas') }}">Artistas</a></li>
                 <li><a href="#imagenes">Imágenes</a></li>
                 <li><a href="#videos">Videos</a></li>
                 <li><a href="#redes-sociales">Redes Sociales</a></li>

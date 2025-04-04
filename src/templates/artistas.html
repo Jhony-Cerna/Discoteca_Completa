@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if artista %}Editar{% else %}Agregar{% endif %} Artista</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/artistas.css') }}">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">{% if artista %}Editar{% else %}Agregar{% endif %} Artista</h1>
+        
+        <!-- Mensajes Flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <!-- Formulario -->
+        <form method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="next" value="{{ next_url }}">
+            
+            <!-- Campos del formulario -->
+            <div class="form-group">
+                <label for="nombreArtistico">Nombre Artístico *</label>
+                <input type="text" class="form-control" id="nombreArtistico" 
+                    name="nombreArtistico" required 
+                    value="{{ form_data.nombreArtistico if form_data else artista.nombre if artista else '' }}">
+            </div>
+            
+            <div class="form-group">
+                <label for="generoMusical">Género Musical *</label>
+                <select class="form-control" id="generoMusical" name="generoMusical" required>
+                    <option value="">Seleccione un género</option>
+                    {% for genero in ['Cumbia', 'Pop', 'Reggaeton', 'Merengue', 'Salsa', 'Rock', 'Electrónica', 'Bachata'] %}
+                        <option value="{{ genero }}" 
+                            {% if (form_data and form_data.generoMusical == genero) or 
+                                  (artista and artista.genero_musical == genero) %}selected{% endif %}>
+                            {{ genero }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="descripcion">Descripción *</label>
+                <textarea class="form-control" id="descripcion" name="descripcion" 
+                        rows="4" required>{{ form_data.descripcion if form_data else artista.descripcion if artista else '' }}</textarea>
+            </div>
+
+            <!-- Sección de imagen (opcional) -->
+            <div class="form-group">
+                <label for="imagen">Imagen del Artista (opcional)</label>
+                <div class="custom-file">
+                    <input type="file" class="custom-file-input" id="imagen" name="imagen" disabled>
+                    <label class="custom-file-label" for="imagen">Funcionalidad temporalmente deshabilitada</label>
+                </div>
+            </div>
+
+            <!-- Botones de acción -->
+            <div class="form-group mt-4">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fas fa-save"></i> {% if artista %}Actualizar{% else %}Guardar{% endif %} Artista
+                </button>
+                <a href="{{ next_url }}" class="btn btn-secondary btn-lg">
+                    <i class="fas fa-times"></i> Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Scripts requeridos -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://kit.fontawesome.com/your-fontawesome-kit.js" crossorigin="anonymous"></script>
+    
+    <!-- Script para manejar nombres de archivo -->
+    <script>
+        // Actualizar nombre de archivo en el input
+        document.querySelector('.custom-file-input').addEventListener('change', function(e) {
+            var fileName = document.getElementById("imagen").files[0].name;
+            var nextSibling = e.target.nextElementSibling;
+            nextSibling.innerText = fileName;
+        });
+    </script>
+</body>
+</html>

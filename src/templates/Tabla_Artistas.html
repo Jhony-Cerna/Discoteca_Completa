@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Artistas</title>
+    <!-- Estilos básicos -->
+    <style>
+        .container { width: 90%; margin: 20px auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #f8f9fa; }
+        tr:hover { background-color: #f5f5f5; }
+        .btn { padding: 6px 12px; text-decoration: none; border: none; cursor: pointer; }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-warning { background-color: #ffc107; color: black; }
+        .btn-danger { background-color: #dc3545; color: white; }
+        .pagination { margin-top: 20px; }
+        .pagination a { padding: 8px 16px; text-decoration: none; border: 1px solid #ddd; }
+        .pagination a.active { background-color: #007bff; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Artistas</h1>
+        
+        <a href="{{ url_for('artistas.crear_artista') }}" class="btn btn-primary">Agregar Artista</a>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Género Musical</th>
+                    <th>Descripción</th>
+                    <th>Redes Sociales</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for artista in artistas.items %}
+                <tr>
+                    <td>{{ artista.nombre }}</td>
+                    <td>{{ artista.genero_musical }}</td>
+                    <td>{{ artista.descripcion }}</td>
+                    <td>
+                        {% if artista.redes_sociales %}
+                            {% for red in artista.redes_sociales %}
+                                <a href="{{ red.detalle.url }}" target="_blank" class="badge badge-primary">
+                                    {{ red.detalle.tipo_link }}
+                                </a><br>
+                            {% endfor %}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('artistas.actualizar_artista', id_artista=artista.id_artista) }}" 
+                            class="btn btn-warning">Editar</a>
+                        
+                        <form action="{{ url_for('artistas.eliminar_artista', id_artista=artista.id_artista) }}" 
+                                method="POST" style="display: inline;">
+                            <button type="submit" class="btn btn-danger" 
+                                    onclick="return confirm('¿Seguro que deseas eliminar este artista?')">
+                                Eliminar
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5">No hay artistas registrados</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Paginación -->
+        <div class="pagination">
+            {% if artistas.has_prev %}
+                <a href="{{ url_for('artistas.artistas', page=artistas.prev_num) }}">&laquo; Anterior</a>
+            {% endif %}
+            
+            {% for page_num in artistas.iter_pages() %}
+                {% if page_num %}
+                    <a href="{{ url_for('artistas.artistas', page=page_num) }}" 
+                        {% if page_num == artistas.page %}class="active"{% endif %}>
+                        {{ page_num }}
+                    </a>
+                {% else %}
+                    <span>...</span>
+                {% endif %}
+            {% endfor %}
+            
+            {% if artistas.has_next %}
+                <a href="{{ url_for('artistas.artistas', page=artistas.next_num) }}">Siguiente &raquo;</a>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

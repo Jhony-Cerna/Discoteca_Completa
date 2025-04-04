@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Actualizar Artista</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/artistas.css') }}">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="card shadow-lg">
+            <div class="card-header bg-primary text-white">
+                <h1 class="card-title mb-0">Actualizar Artista</h1>
+            </div>
+            
+            <div class="card-body">
+                <!-- Mensajes Flash -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show">
+                                {{ message }}
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <form method="POST" action="{{ url_for('artistas.actualizar_artista', id_artista=artista.id_artista) }}">
+                    
+                    <input type="hidden" name="next" value="{{ next | safe }}">
+                    
+                    <div class="form-group">
+                        <label for="nombre">Nombre Artístico</label>
+                        <input type="text" class="form-control" id="nombre" name="nombre" 
+                            value="{{ artista.nombre }}" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="genero_musical">Género Musical</label>
+                        <select class="form-control" id="genero_musical" name="genero_musical" required>
+                            <option value="">Seleccione un género</option>
+                            {% for genero in generos %}
+                                <option value="{{ genero }}" 
+                                    {% if artista.genero_musical == genero %}selected{% endif %}>
+                                    {{ genero }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="descripcion">Descripción</label>
+                        <textarea class="form-control" id="descripcion" name="descripcion" 
+                            rows="4" required>{{ artista.descripcion }}</textarea>
+                    </div>
+
+                    <div class="form-group text-right">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-save"></i> Actualizar
+                        </button>
+                        <a href="{{ url_for('artistas.artistas') }}" class="btn btn-secondary btn-lg">
+                            <i class="fas fa-times"></i> Cancelar
+                        </a>
+                        <a href="{{ url_for('redes.agregar_red_social', id_artista=artista.id_artista) }}?next={{ request.url | urlencode }}" 
+                            class="btn btn-info btn-lg">
+                            <i class="fas fa-share-alt"></i> Redes Sociales
+                        </a>
+                    </div>
+                </form>
+
+                <!-- Sección de Redes Sociales -->
+                <div class="mt-4">
+                    <h4>Redes Sociales Registradas</h4>
+                    <div class="list-group">
+                        {% for red in artista.redes_sociales %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="mb-1">{{ red.detalle.tipo_link }}</h5>
+                                        <a href="{{ red.detalle.url }}" target="_blank" class="text-break">
+                                            {{ red.detalle.url }}
+                                        </a>
+                                        {% if red.detalle.descripcion %}
+                                            <p class="mb-0 mt-1">{{ red.detalle.descripcion }}</p>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <a href="{{ url_for('redes.eliminar_red_social', id_red=red.id_link) }}?next={{ request.url | urlencode }}" 
+                                            class="btn btn-danger btn-sm"
+                                            onclick="return confirm('¿Seguro que deseas eliminar esta red social?')">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info mb-0">No hay redes sociales registradas</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+    // Manejo de parámetros URL codificados
+    (function() {
+        const decodeNextParam = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            let nextParam = urlParams.get('next');
+            
+            if (nextParam) {
+                try {
+                    // Decodificar máximo 2 veces para evitar doble codificación
+                    let decoded = decodeURIComponent(nextParam);
+                    if (decoded.includes('%')) {
+                        decoded = decodeURIComponent(decoded);
+                    }
+                    document.querySelector('input[name="next"]').value = decoded;
+                } catch(e) {
+                    console.error('Error decoding URL:', e);
+                }
+            }
+        };
+        
+        document.addEventListener('DOMContentLoaded', decodeNextParam);
+    })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar Evento</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/Agregar_evento.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Registrar Evento</h1>
+        
+        <!-- Mostrar mensajes flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form action="{{ url_for('eventos.agregar_evento') }}" method="POST">
+            <div class="form-container">
+                <div class="form-left">
+                    <label for="nombre">Nombre del Evento:</label>
+                    <input type="text" id="nombre" name="nombre" required>
+
+                    <label for="descripcion">Descripción:</label>
+                    <textarea id="descripcion" name="descripcion" required></textarea>
+
+                    <label for="direccion">Dirección:</label>
+                    <input type="text" id="direccion" name="direccion" required>
+                </div>
+
+                <div class="form-right">
+                    <label for="fecha">Fecha:</label>
+                    <input type="date" id="fecha" name="fecha" min="{{ min_date }}" required>
+
+                    <label for="hora">Hora:</label>
+                    <input type="time" id="hora" name="hora" step="300" required>
+                </div>
+            </div>
+
+            <h2>Seleccionar Artista</h2>
+            <div class="seleccion-artista">
+                <select id="artista">
+                    <option value="">-- Seleccione un Artista --</option>
+                    {% for artista in artistas %}
+                        <option value="{{ artista.id_artista }}">{{ artista.nombre }} - {{ artista.genero_musical }}</option>
+                    {% endfor %}
+                </select>
+
+                <div class="buttons">
+                    <button type="button" id="agregar-artista">Agregar Artista</button>
+                    <a href="{{ url_for('eventos.crear_artista', next=request.url) }}" class="btn-crear-artista">
+                        Crear Artista
+                    </a>
+                </div>
+            </div>
+
+            <h2>Artistas Seleccionados</h2>
+            <table id="tabla-artistas">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Género</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Filas dinámicas -->
+                </tbody>
+            </table>
+
+            <input type="hidden" name="artistas" id="artistas-seleccionados">
+
+            <div class="botones-finales">
+                <button type="submit">Guardar Evento</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const artistasSeleccionados = new Set();
+            const tablaBody = document.querySelector('#tabla-artistas tbody');
+            
+            // Función para actualizar el input oculto
+            const actualizarHiddenInput = () => {
+                document.getElementById('artistas-seleccionados').value = 
+                    JSON.stringify(Array.from(artistasSeleccionados));
+            };
+
+            // Agregar artista
+            document.getElementById('agregar-artista').addEventListener('click', function() {
+                const select = document.getElementById('artista');
+                const selectedOption = select.options[select.selectedIndex];
+                
+                if (selectedOption.value && !artistasSeleccionados.has(selectedOption.value)) {
+                    artistasSeleccionados.add(selectedOption.value);
+                    
+                    // Crear nueva fila
+                    const row = document.createElement('tr');
+                    row.dataset.artistaId = selectedOption.value;
+                    row.innerHTML = `
+                        <td>${selectedOption.text.split(' - ')[0]}</td>
+                        <td>${selectedOption.text.split(' - ')[1]}</td>
+                        <td>
+                            <button type="button" class="btn btn-warning btn-sm btn-editar">
+                                <i class="fas fa-edit"></i> Editar
+                            </button>
+                            <button type="button" class="btn btn-danger btn-sm btn-eliminar">
+                                <i class="fas fa-trash"></i> Eliminar
+                            </button>
+                        </td>
+                    `;
+
+                    // Evento para editar
+                    row.querySelector('.btn-editar').addEventListener('click', function() {
+                        const currentUrl = encodeURIComponent(window.location.href);
+                        
+                        window.location.href = `/artistas/actualizar/${selectedOption.value}?next=${encodeURIComponent(window.location.href)}`;
+                    });
+
+                    // Evento para eliminar
+                    row.querySelector('.btn-eliminar').addEventListener('click', function() {
+                        artistasSeleccionados.delete(selectedOption.value);
+                        row.remove();
+                        actualizarHiddenInput();
+                    });
+
+                    tablaBody.appendChild(row);
+                    actualizarHiddenInput();
+                }
+            });
+
+            // Inicializar tooltips
+            $('[data-toggle="tooltip"]').tooltip();
+        });
+    </script>
+</body>
+</html>

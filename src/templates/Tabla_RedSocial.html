@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redes Sociales</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>Redes Sociales</h1>
+        <a href="{{ url_for('register_RedSocial', id_artista=id_artista) }}" class="btn btn-primary mb-3">Crear</a>
+
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>ID Link</th>
+                        <th>Nombre Referencia</th>
+                        <th>Tipo</th>
+                        <th>Descripción</th>
+                        <th>URL</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for red in redes %}
+                    <tr>
+                        <td>{{ red.id_link }}</td>
+                        <td>{{ red.nombre_referencia }}</td>
+                        <td>{{ red.tipo_link }}</td>
+                        <td>{{ red.descripcion }}</td>
+                        <td><a href="{{ red.url }}" target="_blank">{{ red.url|truncate(30) }}</a></td>
+                        <td class="acciones-btns">
+                            <a href="{{ url_for('editar_red_social', id_link=red.id_link) }}" class="btn-editar">Editar</a>
+                            <a href="{{ url_for('eliminar_red_social', id_link=red.id_link) }}" class="btn-eliminar" onclick="return confirm('¿Estás seguro de eliminar este registro?')">Eliminar</a>
+                        </td>
+                        
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

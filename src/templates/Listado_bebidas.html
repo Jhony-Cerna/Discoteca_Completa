@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Listado de Bebidas</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/listado_bebidas.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+<body>
+
+    
+    <div class="container">
+        <!-- Mensajes Flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <h1><i class="fas fa-wine-bottle"></i> Listado de Bebidas</h1>
+        
+        <a href="{{ url_for('bebidas.crear_bebida') }}" class="btn-agregar">
+            <i class="fas fa-plus-circle"></i> Agregar Bebida
+        </a>
+
+        <table class="table-styled">
+            <thead>
+                <tr>
+                    <th>Marca</th>
+                    <th>Tamaño (L)</th>
+                    <th>Stock</th>
+                    <th>Categoría</th>
+                    <th>Precio</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for bebida in bebidas %}
+                <tr>
+                    <td>{{ bebida.marca }}</td>
+                    <td>{{ bebida.tamanio }}</td>
+                    <td class="{{ 'stock-bajo' if bebida.stock < 10 else '' }}">
+                        {{ bebida.stock }}
+                    </td>
+                    <td>{{ bebida.categoria.nombre_categoria if bebida.categoria else 'N/A' }}</td>
+                    <td>S/ {{ bebida.producto.precio_regular | round(2) }}</td>
+                    <td class="acciones">
+                        <a href="{{ url_for('bebidas.editar_bebida', id=bebida.id_producto) }}" 
+                            class="btn-editar" 
+                            title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        
+                        <form class="form-eliminar" 
+                                method="POST" 
+                                action="{{ url_for('bebidas.eliminar_bebida', id=bebida.id_producto) }}">
+                            <button type="submit" 
+                                    class="btn-eliminar" 
+                                    title="Eliminar"
+                                    onclick="return confirm('¿Estás seguro de eliminar esta bebida?')">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="no-registros">No hay bebidas registradas</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Script para mensajes flash -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                const alerts = document.querySelectorAll('.alert');
+                alerts.forEach(alert => {
+                    alert.style.display = 'none';
+                });
+            }, 5000);
+        });
+    </script>
+</body>
+</html>

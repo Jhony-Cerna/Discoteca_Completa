@@ -18,18 +18,20 @@
             </a>
             
             <!-- Botones para filtrar registros sin recargar la página -->
-            <button onclick="filtrarProductos('box')">Mostrar Boxes</button>
-            <button onclick="filtrarProductos('mesa')">Mostrar Mesas</button>
+            <a href="{{ url_for('mesasyboxes.filtrar_por_tipo', tipo='box') }}">Filtrar Boxes</a>
+            <a href="{{ url_for('mesasyboxes.filtrar_por_tipo', tipo='mesa') }}">Filtrar Mesas</a>
+
         </div>
 
         <!-- Mensaje para indicar el tipo de registros mostrados -->
-        {% if request.path == '/filtrar/box' %}
+        {% if tipo_filtro == 'box' %}
             <h2>Mostrando solo Boxes</h2>
-        {% elif request.path == '/filtrar/mesa' %}
+        {% elif tipo_filtro == 'mesa' %}
             <h2>Mostrando solo Mesas</h2>
         {% else %}
             <h2>Mostrando todos los registros</h2>
         {% endif %}
+
         <p>Registros encontrados: {{ productos | length }}</p>
         <table>
             <thead>
@@ -67,8 +69,10 @@
                     </td>
                     <td>
                         <a href="{{ url_for('mesasyboxes.editar_mesasybox', id_producto=producto.id_producto) }}">Editar</a> |
-                        <a href="#" onclick="confirmarEliminacion('{{ producto.id_producto }}')">Eliminar</a>
-                    </td>                    
+
+                        <a href="#" onclick="confirmarEliminacion('{{ url_for('mesasyboxes.eliminar_mesasybox', id_producto=producto.id_producto) }}')">Eliminar</a>
+                        
+                    </td>               
                 </tr>
                 {% endfor %}
             </tbody>
@@ -77,5 +81,11 @@
 
     <script src="{{ url_for('static', filename='js/eliminacion_ventana.js') }}"></script>
     <script src="{{ url_for('static', filename='js/filtrado.js') }}"></script>
+    <script>
+        function filtrarProductos(tipo) {
+            window.location.href = `/mesasyboxes/filtrar/${tipo}`;
+        }
+    </script>
+    
 </body>
 </html>
