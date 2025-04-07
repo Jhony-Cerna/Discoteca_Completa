@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Users</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .hide-column {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="{{ url_for('main.pag_admin_principal') }}">Discoteca</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('admin.indexAdmin') }}">Administradores</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('clientes.indexUser') }}">Clientes</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+    <div class="container mt-5">
+        <h1 class="mb-4">Administradores</h1>
+        <a href="{{ url_for('admin.add_admin') }}" class="btn btn-success mb-3">Crear Nuevo Administrador</a>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th class="hide-column">ID</th>
+                    <th>Nombre</th>
+                    <th>Apellido Paterno</th>
+                    <th>Apellido Materno</th>
+                    <th>DNI</th>
+                    <th>Telefono</th>
+                    <th>Correo</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for usuario in usuarios %}
+                <tr>
+                    <td class="hide-column">{{ usuario.id_persona }}</td>
+                    <td>{{ usuario.nombre }}</td>
+                    <td>{{ usuario.apellido_paterno }}</td>
+                    <td>{{ usuario.apellido_materno }}</td>
+                    <td>{{ usuario.dni }}</td>
+                    <td>{{ usuario.telefono }}</td>
+                    <td>{{ usuario.correo }}</td>
+                    <td>{{ usuario.estado == 1 and "Activo" or "Inactivo" }}</td>
+                    <td>
+                        <a href="{{ url_for('admin.editAdmin', id_persona=usuario.id_persona) }}"
+                            class="btn btn-primary btn-sm">Editar</a>
+                        <a href="{{ url_for('admin.deleteAdmin', id_persona=usuario.id_persona) }}"
+                            class="btn btn-danger btn-sm">Eliminar</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+
+</html>
