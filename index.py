@@ -21,6 +21,13 @@ from src.routes.discoteca_info import discoteca_info_bp
 
 from src.routes.productos import productos_bp
 
+from src.routes.admin import admin_bp
+
+from src.routes.clientes import clientes_bp
+
+from src.routes.categorias import categorias_bp
+
+
 from config import Config
 
 app = Flask(__name__, template_folder='src/templates', static_folder='src/static')
@@ -42,6 +49,12 @@ app.register_blueprint(bebidas_bp)  # Nuevo registro
 app.register_blueprint(discoteca_info_bp, url_prefix='/discoteca_info')
 
 app.register_blueprint(productos_bp, url_prefix='/productos')
+
+app.register_blueprint(admin_bp, url_prefix='/admin')
+
+app.register_blueprint(clientes_bp, url_prefix='/clientes')
+
+app.register_blueprint(categorias_bp, url_prefix='/categorias')
 
 # Imprime las rutas registradas
 for rule in app.url_map.iter_rules():

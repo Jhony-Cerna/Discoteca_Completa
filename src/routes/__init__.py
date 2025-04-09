@@ -27,3 +27,7 @@ def test():
 def pag_admin_principal():
     return render_template('pagAdmin_principal.html')  # Renderiza el archivo pagAdmin_principal.html
 
+# Ruta para la página principal del Super Admin
+@main.route('/pagSuperAdmin_principal', methods=['GET'])
+def pag_SuperAdmin_principal():
+    return render_template('pagSuperAdmin_principal.html')  # Renderiza el archivo pagAdmin_principal.html

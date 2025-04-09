@@ -16,18 +16,9 @@
         </div>
         <nav>
             <ul>
-                <li><a href="#usuarios">Usuarios</a></li>
-                <li><a href="#productos">Productos</a></li>
-                <li><a href="{{ url_for('bebidas.listar_bebidas') }}" class="btn btn-primary">Bebidas</a></li>
-                <li><a href="{{ url_for('mesasyboxes.obtener_mesasyboxes') }}">Mesas y Boxes</a></li>
-                <li><a href="{{ url_for('productos.index') }}">Piqueos y Cocteles</a></li>
-                <li><a href="{{ url_for('promociones.lista_promociones') }}" class="btn btn-primary">Promociones</a></li>
-                <li><a href="#servicios">Servicios</a></li>
-                <li><a href="{{ url_for('eventos.eventos_tabla') }}">Eventos</a></li>
-                <li><a href="{{ url_for('artistas.artistas') }}">Artistas</a></li>
-                <li><a href="#imagenes">Imágenes</a></li>
-                <li><a href="#videos">Videos</a></li>
-                <li><a href="#redes-sociales">Redes Sociales</a></li>
+                <li><a href="{{ url_for('admin.indexAdmin') }}">Usuarios</a></li>
+                <li><a href="#discotecas">Discotecas</a></li>
+                <li><a href="{{ url_for('categorias.index') }}">Categoría</a></li>
             </ul>
         </nav>
     </div>

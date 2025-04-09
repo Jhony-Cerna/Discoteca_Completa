@@ -56,6 +56,8 @@ def ingresar():
     # Verificar el rol
     if usuario.rol == 'Administrador':
         return redirect(url_for('main.pag_admin_principal'))
+    elif usuario.rol == 'SuperAdministrador':
+        return redirect(url_for('main.pag_SuperAdmin_principal'))
     else:
         print("El usuario no tiene permisos para acceder.")  # Mensaje de depuración
         flash("No tienes permisos para acceder", "error")
