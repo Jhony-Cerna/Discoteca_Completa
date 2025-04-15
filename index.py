@@ -7,6 +7,7 @@ from src.routes.eventos import eventos_bp
 from src.models.artistas import Artista
 from src.models.evento import Evento
 
+
 from src.routes.artistas import artistas_bp
 
 from src.models.red_social import RedSocial, DetalleRedSocial
@@ -27,6 +28,7 @@ from src.routes.clientes import clientes_bp
 
 from src.routes.categorias import categorias_bp
 
+from src.routes.discotecas import discotecas_bp
 
 from config import Config
 
@@ -55,6 +57,8 @@ app.register_blueprint(admin_bp, url_prefix='/admin')
 app.register_blueprint(clientes_bp, url_prefix='/clientes')
 
 app.register_blueprint(categorias_bp, url_prefix='/categorias')
+
+app.register_blueprint(discotecas_bp, url_prefix='/discotecas')
 
 # Imprime las rutas registradas
 for rule in app.url_map.iter_rules():

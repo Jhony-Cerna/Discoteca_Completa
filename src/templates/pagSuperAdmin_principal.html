@@ -17,7 +17,9 @@
         <nav>
             <ul>
                 <li><a href="{{ url_for('admin.indexAdmin') }}">Usuarios</a></li>
-                <li><a href="#discotecas">Discotecas</a></li>
+                <li><a href="{{ url_for('discotecas.listar_discotecas') }}" class="btn btn-primary">
+                    <i class="fas fa-building"></i> Discotecas
+                </a></li>
                 <li><a href="{{ url_for('categorias.index') }}">Categoría</a></li>
             </ul>
         </nav>

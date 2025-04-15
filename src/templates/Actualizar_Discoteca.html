@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Editar Discoteca</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/Agregar_Discoteca.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+<body>
+    
+    <div class="form-container">
+        <h2><i class="fas fa-edit"></i> Editar Discoteca</h2>
+        
+        <form method="POST" action="{{ url_for('discotecas.editar_discoteca', id=discoteca.id_discoteca) }}">
+            <div class="form-group">
+                <label for="nombre">Nombre:</label>
+                <input type="text" id="nombre" name="nombre" 
+                        value="{{ discoteca.nombre }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="direccion">Dirección:</label>
+                <input type="text" id="direccion" name="direccion" 
+                        value="{{ discoteca.direccion }}" required>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="departamento">Departamento:</label>
+                    <input type="text" id="departamento" name="departamento" 
+                            value="{{ discoteca.departamento }}" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="provincia">Provincia:</label>
+                    <input type="text" id="provincia" name="provincia" 
+                            value="{{ discoteca.provincia }}" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="distrito">Distrito:</label>
+                    <input type="text" id="distrito" name="distrito" 
+                            value="{{ discoteca.distrito }}" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="telefono">Teléfono:</label>
+                <input type="tel" id="telefono" name="telefono" 
+                        pattern="[0-9]{9}" value="{{ discoteca.telefono }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="estado">Estado:</label>
+                <select id="estado" name="estado" required>
+                    <option value="Pendiente" {% if discoteca.estado == 0 %}selected{% endif %}>Pendiente</option>
+                    <option value="Aprobado" {% if discoteca.estado == 1 %}selected{% endif %}>Aprobado</option>
+                    <option value="Rechazado" {% if discoteca.estado == 2 %}selected{% endif %}>Rechazado</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="administrador">Administrador:</label>
+                <select id="administrador" name="administrador" required>
+                    <option value="">Seleccionar...</option>
+                    {% for admin in administradores %}
+                    <option value="{{ admin.id_usuario }}" 
+                            {% if admin.id_usuario == discoteca.admin_id %}selected{% endif %}>
+                        {{ admin.persona.nombre_completo() }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-footer">
+                <button type="submit" class="btn-guardar">
+                    <i class="fas fa-save"></i> Guardar Cambios
+                </button>
+                <a href="{{ url_for('discotecas.listar_discotecas') }}" class="btn-cancelar">
+                    <i class="fas fa-times"></i> Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Validación de formulario -->
+    <script>
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const telefono = document.getElementById('telefono').value;
+            const admin = document.getElementById('administrador').value;
+            
+            if (!/^\d{9}$/.test(telefono)) {
+                alert('El teléfono debe tener 9 dígitos');
+                e.preventDefault();
+            }
+            
+            if (admin === "") {
+                alert('Debe seleccionar un administrador');
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>
