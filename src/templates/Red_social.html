@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulario de Redes Sociales</title>
+    <link rel="stylesheet" href="../static/CSS/Red_social.css">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="form-container">
+            <h2>Nueva Red Social</h2>
+            <form action="{{ url_for('redes.agregar_red_social', id_artista=id_artista) }}" method="POST">
+                <input type="hidden" name="next" value="{{ next }}">
+                <input type="hidden" name="id_artista" value="{{ id_artista }}">
+            
+                <!-- Nombre de referencia (ej: Nombre artístico) -->
+                <div class="form-group">
+                    <label for="nombre_referencia">Nombre de referencia:</label>
+                    <input type="text" class="form-control" id="nombre_referencia" name="nombre_referencia" required>
+                </div>
+            
+                <!-- Tipo de red social (Dropdown mejorado) -->
+                <div class="form-group social-media-select">
+                    <label>Tipo de Red Social:</label>
+                    <div class="dropdown-header" onclick="toggleDropdown()">
+                        Selecciona una red social ▼
+                    </div>
+                    <div class="custom-dropdown" id="dropdown">
+                        <div class="social-option" onclick="selectSocial('Facebook')">
+                            <img src="https://img.icons8.com/color/48/facebook.png" alt="Facebook">
+                            Facebook
+                        </div>
+                        <div class="social-option" onclick="selectSocial('Instagram')">
+                            <img src="https://img.icons8.com/color/48/instagram-new.png" alt="Instagram">
+                            Instagram
+                        </div>
+                        <div class="social-option" onclick="selectSocial('Twitter')">
+                            <img src="https://img.icons8.com/color/48/twitter.png" alt="Twitter">
+                            Twitter
+                        </div>
+                        <div class="social-option" onclick="selectSocial('Twitter')">
+                            <img src="https://img.icons8.com/color/48/tiktok.png" alt="Twitter">
+                            Tik-Tok
+                        </div>
+                        <div class="social-option" onclick="selectSocial('Twitter')">
+                            <img src="https://img.icons8.com/color/48/youtube.png" alt="Twitter">
+                            YouTube
+                        </div>
+                    </div>
+                    <input type="hidden" name="tipo_link" id="tipo_link" required>
+                </div>
+            
+                <!-- URL y Descripción -->
+                <div class="form-group">
+                    <label for="url">URL:</label>
+                    <input class="form-control" id="url" name="url" required>
+                </div>
+            
+                <div class="form-group">
+                    <label for="descripcion">Descripción:</label>
+                    <textarea class="form-control" id="descripcion" name="descripcion"></textarea>
+                </div>
+            
+                <button type="submit" class="btn btn-success">Guardar</button>
+            </form> <!--AACA ACABA-->
+        </div>
+    </div>
+
+    <script>
+        function toggleDropdown() {
+            const dropdown = document.getElementById('dropdown');
+            dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function selectSocial(socialName) {
+            document.querySelector('.dropdown-header').innerHTML = socialName + ' ▼';
+            document.getElementById('tipo_link').value = socialName;  // Se corrige el ID
+            document.getElementById('dropdown').style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            if (!event.target.closest('.social-media-select')) {
+                document.getElementById('dropdown').style.display = 'none';
+            }
+        };
+    </script>
+</body>
+</html>

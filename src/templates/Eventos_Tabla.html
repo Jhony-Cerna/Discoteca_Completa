@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eventos</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/Eventos_Tabla.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Eventos</h1>
+
+        <a href="{{ url_for('eventos.agregar_evento') }}">
+            <button class="btn-crear">Crear Registro</button>
+        </a>
+
+        <!-- Mostrar mensajes flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Descripción</th>
+                    <th>Fecha</th>
+                    <th>Dirección</th>
+                    <th>Hora</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if eventos %}
+                    {% for evento in eventos %}
+                        <tr>
+                            <td>{{ evento.nombre_evento }}</td>
+                            <td>{{ evento.descripcion }}</td>
+                            <td>{{ evento.fecha.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ evento.lugar }}</td>
+                            <td>{{ evento.hora.strftime('%H:%M') }}</td>
+                            <td>
+                                <a href="{{ url_for('eventos.editar_evento', nombre_evento=evento.nombre_evento) }}">
+                                    <button class="btn-editar">Editar</button>
+                                </a>
+                                <button class="btn-eliminar" data-id="{{ evento.id }}">Eliminar</button>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="6">No hay eventos registrados.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    <script src="{{ url_for('static', filename='js/edit-del_evento.js') }}"></script>
+</body>
+</html>

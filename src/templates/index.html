@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pantalla Principal - Mesas y Boxes</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/indexPrincipal.css') }}">
+</head>
+<body>
+    <header>
+        <h1>Pantalla Principal - Mesas y Boxes</h1>
+    </header>
+
+    <div class="container">
+        <div class="buttons">
+            <a href="{{ url_for('mesasyboxes.agregar_mesasyboxes_form') }}">
+                <button>Crear Registro</button>
+            </a>
+            
+            <!-- Botones para filtrar registros sin recargar la página -->
+            <a href="{{ url_for('mesasyboxes.filtrar_por_tipo', tipo='box') }}">Filtrar Boxes</a>
+            <a href="{{ url_for('mesasyboxes.filtrar_por_tipo', tipo='mesa') }}">Filtrar Mesas</a>
+
+        </div>
+
+        <!-- Mensaje para indicar el tipo de registros mostrados -->
+        {% if tipo_filtro == 'box' %}
+            <h2>Mostrando solo Boxes</h2>
+        {% elif tipo_filtro == 'mesa' %}
+            <h2>Mostrando solo Mesas</h2>
+        {% else %}
+            <h2>Mostrando todos los registros</h2>
+        {% endif %}
+
+        <p>Registros encontrados: {{ productos | length }}</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Tipo</th>
+                    <th>Nombre</th>
+                    <!--<th>Descripción</th> -->
+                    <th>Precio Regular</th>
+                    <th>Reserva</th>
+                    <th>Promoción</th>
+                    <th>Capacidad</th>
+                    <th>Contenido</th>
+                    <th>Estado</th>
+                    <th>Ubicación</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for producto in productos %}
+                <tr>
+                    <td>{{ producto.tipo }}</td> <!-- Tipo -->
+                    <td>{{ producto.nombre }}</td> <!-- Nombre -->
+                    <td>S/. {{ producto.precio_regular }}</td> <!-- Precio Regular -->
+                    <td>S/. {{ producto.reserva or 'N/A' }}</td> <!-- Reserva -->
+                    <td>{{ 'Sí' if producto.promocion else 'No' }}</td> <!-- Promoción -->
+                    <td>{{ producto.capacidad or 'N/A' }}</td> <!-- Capacidad -->
+                    <td>{{ producto.contenido or 'N/A' }}</td> <!-- Contenido -->
+                    <td>{{ producto.estado or 'N/A' }}</td> <!-- Estado -->
+                    <td>
+                        {% if producto.ubicacion %}
+                            <img src="{{ url_for('static', filename='img/' + producto.ubicacion) }}" alt="Imagen de ubicación">
+                        {% else %}
+                            Sin ubicación
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('mesasyboxes.editar_mesasybox', id_producto=producto.id_producto) }}">Editar</a> |
+
+                        <a href="#" onclick="confirmarEliminacion('{{ url_for('mesasyboxes.eliminar_mesasybox', id_producto=producto.id_producto) }}')">Eliminar</a>
+                        
+                    </td>               
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/eliminacion_ventana.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/filtrado.js') }}"></script>
+    <script>
+        function filtrarProductos(tipo) {
+            window.location.href = `/mesasyboxes/filtrar/${tipo}`;
+        }
+    </script>
+    
+</body>
+</html>

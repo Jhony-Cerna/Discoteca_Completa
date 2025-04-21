@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agregar Categoría</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="{{ url_for('main.pag_admin_principal') }}"
+            style="text-decoration: underline;">Discoteca</a>
+    </nav>
+    <div class="container mt-5">
+        <h1 class="mb-4">Agregar Nueva Categoría</h1>
+        <form action="{{ url_for('categorias.add_categoria') }}" method="POST">
+            <div class="form-group">
+                <label for="nombre_categoria">Nombre de la Categoría</label>
+                <input type="text" class="form-control" id="nombre_categoria" name="nombre_categoria" required>
+            </div>
+            <div class="form-group">
+                <label for="descripcion_categoria">Descripción</label>
+                <textarea class="form-control" id="descripcion_categoria" name="descripcion_categoria" rows="3"
+                    required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Agregar</button>
+            <a href="{{ url_for('categorias.index') }}" class="btn btn-secondary">Cancelar</a>
+        </form>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+
+</html>

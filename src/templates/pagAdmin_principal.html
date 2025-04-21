@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/pagAdmin_pincipal.css') }}">
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo">
+            <img src="logo.png" alt="Logo" />
+        </div>
+        <div class="admin-name">
+            <h3>Nombre del Admin</h3> <!-- Este nombre se puede recuperar de la base de datos -->
+        </div>
+        <nav>
+            <ul>
+                <li><a href="#usuarios">Usuarios</a></li>
+                <li><a href="#productos">Productos</a></li>
+                <li><a href="{{ url_for('bebidas.listar_bebidas') }}" class="btn btn-primary">Bebidas</a></li>
+                <li><a href="{{ url_for('mesasyboxes.obtener_mesasyboxes') }}">Mesas y Boxes</a></li>
+                <li><a href="{{ url_for('productos.index') }}">Piqueos y Cocteles</a></li>
+                <li><a href="{{ url_for('promociones.lista_promociones') }}" class="btn btn-primary">Promociones</a></li>
+                <li><a href="#servicios">Servicios</a></li>
+                <li><a href="{{ url_for('eventos.eventos_tabla') }}">Eventos</a></li>
+                <li><a href="{{ url_for('artistas.artistas') }}">Artistas</a></li>
+                <li><a href="#imagenes">Imágenes</a></li>
+                <li><a href="#videos">Videos</a></li>
+                <li><a href="#redes-sociales">Redes Sociales</a></li>
+            </ul>
+        </nav>
+    </div>
+    <div class="content">
+        <h1>Bienvenido al Panel de Administración</h1>
+        <p>Aquí puedes gestionar todos los aspectos de tu aplicación.</p>
+    </div>
+</body>
+</html>
