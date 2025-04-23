@@ -1,3 +1,4 @@
+import os
 from flask import Flask
 from src.database.db_mysql import init_db
 from src.routes import main  # Asegúrate de que esto esté importado correctamente
@@ -6,7 +7,8 @@ from src.routes.eventos import eventos_bp
 # MODELS:
 from src.models.artistas import Artista
 from src.models.evento import Evento
-
+#Para imagenes y videos:
+from werkzeug.utils import secure_filename
 
 from src.routes.artistas import artistas_bp
 
@@ -34,6 +36,11 @@ from config import Config
 
 app = Flask(__name__, template_folder='src/templates', static_folder='src/static')
 app.config.from_object(Config)
+
+#Imagenes
+app.config['UPLOAD_FOLDER'] = 'src/static/uploads'
+app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif', 'mp4', 'mov'}
+#termina lo de imagenes
 
 init_db(app)  # Inicializa la base de datos
 app.register_blueprint(main)  # Registra el Blueprint principal
