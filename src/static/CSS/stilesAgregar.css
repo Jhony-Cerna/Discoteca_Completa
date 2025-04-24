@@ -90,3 +90,25 @@ button:hover {
 .hidden {
     display: none;
 }
+<<<<<<< HEAD
+=======
+
+/* Estilos para preview de archivos */
+#file-preview {
+    padding: 10px;
+    border: 1px dashed #ccc;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+
+.badge {
+    font-size: 0.9em;
+    padding: 8px 12px;
+    display: inline-flex;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: #f8f9fa;
+}
+>>>>>>> 8aaea206c700237b703ca5bf15974abe0c4cc594

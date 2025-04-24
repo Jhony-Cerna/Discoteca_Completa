@@ -1,5 +1,12 @@
 import os
+<<<<<<< HEAD
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+=======
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
+#from src.models.media import Media  # Asegúrate de importar el modelo correcto
+from src.models.media import ImagenVideo  # Asegúrate que el modelo exista
+from src.utils.file_handling import allowed_file, secure_filename_wrapper
+>>>>>>> 8aaea206c700237b703ca5bf15974abe0c4cc594
 from src.database.db_mysql import db
 
 mesasyboxes_bp = Blueprint('mesasyboxes', __name__)
@@ -52,6 +59,7 @@ def obtener_mesasyboxes():
 
 @mesasyboxes_bp.route('/form_add_mesasyboxes', methods=['GET'])
 def agregar_mesasyboxes_form():
+<<<<<<< HEAD
     return render_template('Agregar_Box.html')
 
 @mesasyboxes_bp.route('/add_mesasyboxes', methods=['POST'])
@@ -66,6 +74,39 @@ def agregar_mesasyboxes():
         reserva = float(request.form.get('reserva', 0.00))
 
         # Crear el producto
+=======
+    id_discoteca = 1  # Obtener este valor de la sesión o base de datos
+    return render_template('Agregar_Box.html', id_discoteca=id_discoteca)
+
+@mesasyboxes_bp.route('/add_mesasyboxes', methods=['POST'])
+def agregar_mesasyboxes():
+    try:
+        # 1. Obtener id_discoteca (valor estático temporal)
+        id_discoteca = 1  # ← Mantener este valor hasta implementar lógica real
+
+        # 2. Validar campos requeridos
+        required_fields = ['tipo', 'nombre', 'precio_regular']
+        if not all(field in request.form for field in required_fields):
+            flash("Faltan campos requeridos", "danger")
+            return redirect(url_for('mesasyboxes.agregar_mesasyboxes_form'))
+
+        # 3. Obtener datos del formulario
+        tipo = request.form['tipo']
+        nombre = request.form['nombre']
+        descripcion = request.form.get('descripcion', '')
+        precio_regular = float(request.form['precio_regular'])
+        promocion = 'promocion' in request.form
+        reserva = float(request.form.get('reserva', 0.0))
+
+        # 4. Validar archivos
+        archivos = request.files.getlist('archivos')
+        for file in archivos:
+            if file.filename != '' and not allowed_file(file.filename, current_app.config['ALLOWED_EXTENSIONS']):
+                flash("Tipo de archivo no permitido", "danger")
+                return redirect(url_for('mesasyboxes.agregar_mesasyboxes_form'))
+
+        # 5. Crear producto
+>>>>>>> 8aaea206c700237b703ca5bf15974abe0c4cc594
         nuevo_producto = Producto(
             tipo=tipo,
             nombre=nombre,
@@ -74,6 +115,7 @@ def agregar_mesasyboxes():
             promocion=promocion
         )
         db.session.add(nuevo_producto)
+<<<<<<< HEAD
         db.session.commit()
 
         # Obtener el id del producto insertado
@@ -100,6 +142,56 @@ def agregar_mesasyboxes():
         flash("Producto y espacio agregados exitosamente.", "success")
         return redirect(url_for('mesasyboxes.obtener_mesasyboxes'))
 
+=======
+        db.session.flush()
+
+        # 6. Crear espacio si corresponde
+        if tipo in ['box', 'mesa']:
+            nuevo_espacio = Espacio(
+                id_producto=nuevo_producto.id_producto,
+                capacidad=int(request.form['capacidad']),
+                tamanio=request.form.get('tamanio'),
+                contenido=request.form.get('contenido'),
+                estado=request.form['estado'],
+                ubicacion=request.form.get('ubicacion', 'Sin ubicación'),  # Usar valor por defecto
+                reserva=reserva
+            )
+            db.session.add(nuevo_espacio)
+
+        # 7. Manejar archivos multimedia
+        for file in archivos:
+            if file and file.filename:
+                filename = secure_filename_wrapper(file.filename)
+                file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                file.save(file_path)
+                nuevo_media = ImagenVideo(
+                    Id_Discoteca=id_discoteca,
+                    Tipo_Tabla='espacios',
+                    Id_referenciaTabla=nuevo_producto.id_producto,
+                    Descripcion=request.form.get('descripcion_media', ''),
+                    Tipo_Archivo='imagen' if file.content_type.startswith('image') else 'video',
+                    Archivo=filename
+                )
+                db.session.add(nuevo_media)
+
+        db.session.commit()
+        flash("Registro exitoso con multimedia", "success")
+        return redirect(url_for('mesasyboxes.obtener_mesasyboxes'))
+
+    except KeyError as ke:
+        db.session.rollback()
+        flash(f"Falta el campo: {str(ke)}", "danger")
+    except ValueError as ve:
+        db.session.rollback()
+        flash(f"Error en datos: {str(ve)}", "danger")
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error: {str(e)}")
+        flash("Error interno al procesar la solicitud", "danger")
+    
+    return redirect(url_for('mesasyboxes.agregar_mesasyboxes_form'))
+
+>>>>>>> 8aaea206c700237b703ca5bf15974abe0c4cc594
 @mesasyboxes_bp.route('/editar/<int:id_producto>', methods=['GET'])
 def editar_mesasybox(id_producto):
     """Carga la página de edición con los datos del producto y su espacio."""
@@ -236,6 +328,65 @@ def filtrar_por_tipo(tipo):
 
 
 
+<<<<<<< HEAD
+=======
+@mesasyboxes_bp.route('/media/<int:id_producto>', methods=['GET'])
+def obtener_media(id_producto):
+    """Obtiene multimedia asociada a un producto"""
+    try:
+        media = Media.query.filter_by(
+            Tipo_Tabla='espacios',
+            Id_referenciaTabla=id_producto
+        ).all()
+
+        return jsonify([{
+            'id': item.Id_imgV,
+            'tipo': item.Tipo_Archivo,
+            'descripcion': item.Descripcion,
+            'url': url_for('static', filename=f'uploads/{item.Archivo}'),
+            'nombre_archivo': item.Archivo
+        } for item in media]), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error obteniendo media: {str(e)}")
+        return jsonify(error="Error al obtener multimedia"), 500
+
+@mesasyboxes_bp.route('/media/<int:id_media>', methods=['DELETE'])
+def eliminar_media(id_media):
+    """Elimina un archivo multimedia"""
+    try:
+        media = Media.query.get_or_404(id_media)
+        
+        # Construir ruta completa del archivo
+        file_path = os.path.join(
+            current_app.config['UPLOAD_FOLDER'], 
+            media.Archivo
+        )
+        
+        # Eliminar físicamente el archivo
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        
+        # Eliminar registro de la base de datos
+        db.session.delete(media)
+        db.session.commit()
+        
+        return jsonify(
+            success=True, 
+            message="Archivo eliminado correctamente"
+        ), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error eliminando media: {str(e)}")
+        db.session.rollback()
+        return jsonify(
+            error="No se pudo eliminar el archivo", 
+            detalle=str(e)
+        ), 500
+
+
+
+>>>>>>> 8aaea206c700237b703ca5bf15974abe0c4cc594
 
 
 

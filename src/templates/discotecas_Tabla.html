@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+<<<<<<< HEAD
   <head>
     <meta charset="UTF-8" />
     <title>Gestor de Discotecas</title>
@@ -33,6 +34,41 @@
       <table class="styled-table">
         <thead>
           <tr>
+=======
+    <head>
+    <meta charset="UTF-8" />
+    <title>Gestor de Discotecas</title>
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='CSS/discotecas_Tabla.css') }}"
+    />
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+    />
+    </head>
+    <body>
+    <div class="container">
+        <!-- Mensajes Flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %} {% if
+        messages %} {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %} {% endif %} {% endwith %}
+
+        <h1 class="header">
+        <i class="fas fa-building"></i> Administrar Discotecas
+        <a
+            href="{{ url_for('discotecas.crear_discoteca') }}"
+            class="btn-agregar"
+        >
+            <i class="fas fa-plus"></i> Nueva Discoteca
+        </a>
+        </h1>
+
+        <table class="styled-table">
+        <thead>
+            <tr>
+>>>>>>> 8aaea206c700237b703ca5bf15974abe0c4cc594
             <th>Nombre</th>
             <th>Dirección</th>
             <th>Departamento</th>
@@ -42,11 +78,19 @@
             <th>Estado</th>
             <th>Administrador</th>
             <th>Acciones</th>
+<<<<<<< HEAD
           </tr>
         </thead>
         <tbody>
           {% for discoteca in discotecas %}
           <tr>
+=======
+            </tr>
+        </thead>
+        <tbody>
+            {% for discoteca in discotecas %}
+            <tr>
+>>>>>>> 8aaea206c700237b703ca5bf15974abe0c4cc594
             <td>{{ discoteca.nombre }}</td>
             <td>{{ discoteca.direccion }}</td>
             <td>{{ discoteca.departamento }}</td>
@@ -54,6 +98,7 @@
             <td>{{ discoteca.distrito }}</td>
             <td>{{ discoteca.administrador.persona.fecha_registro }}</td> <!--Cambio de la columna telefono por fecha de registro-->
             <td class="estado estado-{{ discoteca.estado }}">
+<<<<<<< HEAD
               {{ discoteca.estado_texto() }}
             </td>
             <td>
@@ -112,4 +157,64 @@
       });
     </script>
   </body>
+=======
+                {{ discoteca.estado_texto() }}
+            </td>
+            <td>
+                {% if discoteca.administrador.persona %} {{
+                discoteca.administrador.persona.nombre }} {{
+                discoteca.administrador.persona.apellido_paterno }} {% else %}
+                <span class="error">¡Error de relación!</span>
+                {% endif %}
+            </td>
+            <td class="acciones">
+                <a
+                href="{{ url_for('discotecas.editar_discoteca', id=discoteca.id_discoteca) }}"
+                class="btn-editar"
+                title="Editar"
+                >
+                <i class="fas fa-edit"></i>
+                </a>
+
+                <form
+                method="POST"
+                action="{{ url_for('discotecas.eliminar_discoteca', id=discoteca.id_discoteca) }}"
+                class="form-eliminar"
+                >
+                <button
+                    type="submit"
+                    class="btn-eliminar"
+                    title="Eliminar"
+                    onclick="return confirm('¿Eliminar permanentemente esta discoteca?')"
+                >
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+                </form>
+            </td>
+            </tr>
+            {% else %}
+            <tr>
+            <td colspan="9" class="no-data">
+                <i class="fas fa-info-circle"></i> No hay discotecas registradas
+            </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        </table>
+    </div>
+
+    <!-- Script para ocultar mensajes flash -->
+    <script  cript>
+        document.addEventListener("DOMContentLoaded", () => {
+        setTimeout(() => {
+            const alerts = document.querySelectorAll(".alert");
+            alerts.forEach((alert) => {
+            alert.style.opacity = "0";
+            setTimeout(() => alert.remove(), 300);
+            });
+        }, 5000);
+        });
+    </script>
+    </body>
+>>>>>>> 8aaea206c700237b703ca5bf15974abe0c4cc594
 </html>
