@@ -235,4 +235,3 @@ def filtrar_por_tipo(tipo):
     return render_template('index.html', productos=resultado, tipo_filtro=tipo)
 
 
-
