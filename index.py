@@ -34,6 +34,9 @@ from src.routes.discotecas import discotecas_bp
 
 from src.routes.servicios import servicios_bp
 
+
+
+
 from config import Config
 
 app = Flask(__name__, template_folder='src/templates', static_folder='src/static')
