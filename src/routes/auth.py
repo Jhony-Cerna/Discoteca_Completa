@@ -74,11 +74,3 @@ def ingresar():
         print("El usuario no tiene permisos para acceder.")
         flash("No tienes permisos para acceder", "error")
         return redirect(url_for('main.auth.login'))
-<<<<<<< HEAD
-=======
-
-
-
-
-
->>>>>>> 8aaea206c700237b703ca5bf15974abe0c4cc594
