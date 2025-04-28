@@ -72,8 +72,10 @@
                 <input 
                     type="checkbox" 
                     id="reserva_checkbox" 
-                    name="reserva"
-                    {% if espacio.reserva is not none %}checked{% endif %}
+                    name="tiene_reserva"
+
+                    {% if espacio.reserva is not none and espacio.reserva > 0 %} checked {% endif %}
+                    onchange="toggleReservaField()"
                 >
                 <span>¿Tiene reserva?</span>
             </div>
@@ -95,7 +97,7 @@
 
             <div class="form-group">
                 <label for="promocion">Promoción:</label>
-                <input type="checkbox" id="promocion" name="promocion" {% if producto.promocion %}checked{% endif %}>
+                <input type="checkbox" id="promocion" name="promocion" {% if producto.promocion == 1 %}checked{% endif %}>
             </div>
 
             {% if espacio %}

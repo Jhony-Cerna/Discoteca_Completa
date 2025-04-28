@@ -75,8 +75,9 @@ def agregar_mesasyboxes():
         nombre = request.form['nombre']
         descripcion = request.form.get('descripcion', '')
         precio_regular = float(request.form['precio_regular'])
-        promocion = 'promocion' in request.form
+        promocion = int(request.form.get('promocion', 0))  # Guarda 0 si no está presente en el formulario
         reserva = float(request.form.get('reserva', 0.0))
+        
 
         # 4. Validar archivos
         archivos = request.files.getlist('archivos')
@@ -199,7 +200,8 @@ def actualizar_mesasybox(id_producto):
             producto.nombre = data.get('nombre', producto.nombre)
             producto.descripcion = data.get('descripcion', producto.descripcion)
             producto.precio_regular = float(data.get('precio_regular', producto.precio_regular))
-            producto.promocion = 'promocion' in data  # Checkbox
+            espacio.reserva = float(data.get('reserva_precio', 0.0))  # Si está vacío, será 0.0
+            producto.promocion = int(data.get('promocion', 0))
 
             # Actualizar campos del espacio (si existe)
             if espacio:

@@ -65,12 +65,15 @@
             
             <div class="form-group" id="reserva_field" style="display: none;">
                 <label for="reserva">Precio de la reserva:</label>
-                <input type="number" id="reserva" name="reserva" step="0.01" value="{{ espacio[6] if espacio and espacio[6] > 0 else '' }}">
+                <input type="number" id="reserva" name="reserva" step="0.01" value="{{ espacio[6] if espacio and espacio[6] > 0 else '0' }}">
             </div>
+            
 
             <div class="form-group">
                 <label for="promocion">Promoción:</label>
-                <input type="checkbox" id="promocion" name="promocion"> ¿Cuenta con promoción?
+                <!-- Campo oculto con valor por defecto -->
+                <input type="hidden" name="promocion" value="0">
+                <input type="checkbox" id="promocion" name="promocion" value="1"> ¿Cuenta con promoción?
             </div>
 
             <div class="form-group">
