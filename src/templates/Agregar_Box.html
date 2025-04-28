@@ -137,11 +137,17 @@
                                     <option value="video">Video</option>
                                 </select>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Archivos</label>
-                                <input class="form-control" type="file" name="archivos" multiple 
-                                        accept="image/*, video/*" id="fileInput">
+                            <!-- DIV PARA IMAGENES-->
+                            <div class="mb-3" id="fileInputGroup">
+                                <label class="form-label">Archivo (solo para imágenes)</label>
+                                <input class="form-control" type="file" name="archivos" accept="image/*" id="fileInput">
                             </div>
+                            <!-- DIV PARA VIDEOS-->
+                            <div class="mb-3" id="urlInputGroup" style="display: none;">
+                                <label class="form-label">URL del Video</label>
+                                <input class="form-control" type="url" name="url_video" id="urlInput">
+                            </div>
+                            
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
@@ -178,6 +184,46 @@
                     preview.appendChild(badge);
                 });
                 
+                $('#mediaModal').modal('hide');
+            }
+
+            document.querySelector('select[name="tipo_archivo"]').addEventListener('change', function () {
+                const tipo = this.value;
+                document.getElementById('fileInputGroup').style.display = tipo === 'imagen' ? 'block' : 'none';
+                document.getElementById('urlInputGroup').style.display = tipo === 'video' ? 'block' : 'none';
+            });
+        
+            <!--Script para cuando le doy imagen cambie en archivo y si es video cambie a textfield  -->
+            function addFiles() {
+                const tipo = document.querySelector('select[name="tipo_archivo"]').value;
+                const descripcion = document.querySelector('textarea[name="descripcion_media"]').value;
+                const preview = document.getElementById('file-preview');
+                let label = '';
+        
+                if (tipo === 'imagen') {
+                    const fileInput = document.getElementById('fileInput');
+                    if (fileInput.files.length > 0) {
+                        label = fileInput.files[0].name;
+                    }
+                } else if (tipo === 'video') {
+                    const urlInput = document.getElementById('urlInput').value;
+                    if (urlInput) {
+                        label = `Video URL: ${urlInput}`;
+                    }
+                }
+        
+                if (label) {
+                    const badge = document.createElement('span');
+                    badge.className = 'badge bg-primary me-1';
+                    badge.innerHTML = `
+                        ${label}
+                        <span class="ms-2" onclick="this.parentElement.remove()" style="cursor:pointer">
+                            <i class="fas fa-times"></i>
+                        </span>
+                    `;
+                    preview.appendChild(badge);
+                }
+        
                 $('#mediaModal').modal('hide');
             }
         </script>
