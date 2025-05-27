@@ -5,61 +5,65 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registrar Evento</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='CSS/Agregar_evento.css') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
     <div class="container">
         <h1>Registrar Evento</h1>
         
-        <!-- Mostrar mensajes flash -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
                 {% endfor %}
             {% endif %}
         {% endwith %}
 
-        <form action="{{ url_for('eventos.agregar_evento') }}" method="POST">
+        <form action="{{ url_for('eventos.agregar_evento') }}" method="POST" enctype="multipart/form-data" id="eventoForm">
             <div class="form-container">
                 <div class="form-left">
                     <label for="nombre">Nombre del Evento:</label>
-                    <input type="text" id="nombre" name="nombre" required>
+                    <input type="text" id="nombre" name="nombre" value="{{ form_data.nombre if form_data else '' }}" required>
 
                     <label for="descripcion">Descripción:</label>
-                    <textarea id="descripcion" name="descripcion" required></textarea>
+                    <textarea id="descripcion" name="descripcion" required>{{ form_data.descripcion if form_data else '' }}</textarea>
 
                     <label for="direccion">Dirección:</label>
-                    <input type="text" id="direccion" name="direccion" required>
+                    <input type="text" id="direccion" name="direccion" value="{{ form_data.direccion if form_data else '' }}" required>
                 </div>
 
                 <div class="form-right">
                     <label for="fecha">Fecha:</label>
-                    <input type="date" id="fecha" name="fecha" min="{{ min_date }}" required>
+                    <input type="date" id="fecha" name="fecha" value="{{ form_data.fecha if form_data else min_date }}" min="{{ min_date }}" required>
 
                     <label for="hora">Hora:</label>
-                    <input type="time" id="hora" name="hora" step="300" required>
+                    <input type="time" id="hora" name="hora" value="{{ form_data.hora if form_data else '' }}" step="300" required>
                 </div>
             </div>
 
             <h2>Seleccionar Artista</h2>
             <div class="seleccion-artista">
-                <select id="artista">
+                <select id="artista" class="form-select">
                     <option value="">-- Seleccione un Artista --</option>
-                    {% for artista in artistas %}
-                        <option value="{{ artista.id_artista }}">{{ artista.nombre }} - {{ artista.genero_musical }}</option>
+                    {% for artista_item in artistas %} {# Renombré la variable del bucle para evitar conflicto con la variable 'artistas' global #}
+                        <option value="{{ artista_item.id_artista }}">{{ artista_item.nombre }} - {{ artista_item.genero_musical }}</option>
                     {% endfor %}
                 </select>
 
-                <div class="buttons">
-                    <button type="button" id="agregar-artista">Agregar Artista</button>
-                    <a href="{{ url_for('eventos.crear_artista', next=request.url) }}" class="btn-crear-artista">
-                        Crear Artista
+                <div class="buttons mt-2">
+                    <button type="button" id="agregar-artista" class="btn btn-info">Agregar Artista</button>
+                    <a href="{{ url_for('artistas.crear_artista', next=request.url) }}" class="btn btn-success"> {# Asumiendo que la ruta para crear artista es 'artistas.crear_artista' #}
+                        Crear Nuevo Artista
                     </a>
                 </div>
             </div>
 
-            <h2>Artistas Seleccionados</h2>
-            <table id="tabla-artistas">
+            <h2 class="mt-3">Artistas Seleccionados</h2>
+            <table id="tabla-artistas" class="table table-striped table-bordered">
                 <thead>
                     <tr>
                         <th>Nombre</th>
@@ -68,75 +72,299 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- Filas dinámicas -->
-                </tbody>
+                    </tbody>
             </table>
-
             <input type="hidden" name="artistas" id="artistas-seleccionados">
+            
+            <div id="hiddenMediaInputsContainer" style="display: none;"></div>
 
-            <div class="botones-finales">
-                <button type="submit">Guardar Evento</button>
+            <div class="form-group mt-3">
+                <label class="form-label">Multimedia del Evento:</label>
+                <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#mediaModal">
+                    <i class="fas fa-plus"></i> Agregar Imágenes/Videos
+                </button>
+                
+                <div id="file-preview" class="mt-2 d-flex flex-wrap"></div>
+                <div id="limite-alerta" class="text-danger mt-2"></div>
+            </div>
+
+            <div class="modal fade" id="mediaModal" tabindex="-1" aria-labelledby="mediaModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="mediaModalLabel">Subir Multimedia</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="descripcion_media" class="form-label">Descripción del Archivo/Video</label>
+                                <textarea class="form-control" id="descripcion_media" name="descripcion_media_temp"></textarea> {# Nombre temporal para no chocar #}
+                            </div>
+                            <div class="mb-3">
+                                <label for="tipo_archivo_media" class="form-label">Tipo de Archivo</label>
+                                <select class="form-select" id="tipo_archivo_media" name="tipo_archivo_temp"> {# Nombre temporal #}
+                                    <option value="imagen">Imagen</option>
+                                    <option value="video">Video</option>
+                                </select>
+                            </div>
+                            <div class="mb-3" id="fileInputGroup">
+                                <label for="fileInput" class="form-label">Archivo de Imagen</label>
+                                <input class="form-control" type="file" accept="image/*" id="fileInput"> {# Sin 'name' aquí, lo clonaremos con nombre #}
+                            </div>
+                            <div class="mb-3" id="urlInputGroup" style="display: none;">
+                                <label for="urlInput" class="form-label">URL del Video (YouTube, Vimeo)</label>
+                                <input class="form-control" type="url" id="urlInput" placeholder="https://">
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                            <button type="button" class="btn btn-primary" onclick="addFiles()">Agregar a Previsualización</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="botones-finales mt-4">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fas fa-save"></i> Guardar Evento
+                </button>
+                <a href="{{ url_for('eventos.eventos_tabla') }}" class="btn btn-outline-secondary btn-lg ms-2">
+                    <i class="fas fa-times-circle"></i> Cancelar
+                </a>
             </div>
         </form>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    
     <script>
+        // Script para Artistas
         document.addEventListener('DOMContentLoaded', function() {
             const artistasSeleccionados = new Set();
             const tablaBody = document.querySelector('#tabla-artistas tbody');
+            const hiddenInputArtistas = document.getElementById('artistas-seleccionados');
             
-            // Función para actualizar el input oculto
-            const actualizarHiddenInput = () => {
-                document.getElementById('artistas-seleccionados').value = 
-                    JSON.stringify(Array.from(artistasSeleccionados));
+            const actualizarHiddenInputArtistas = () => {
+                hiddenInputArtistas.value = JSON.stringify(Array.from(artistasSeleccionados));
             };
 
-            // Agregar artista
             document.getElementById('agregar-artista').addEventListener('click', function() {
                 const select = document.getElementById('artista');
+                if (!select) return;
                 const selectedOption = select.options[select.selectedIndex];
                 
-                if (selectedOption.value && !artistasSeleccionados.has(selectedOption.value)) {
+                if (selectedOption && selectedOption.value && !artistasSeleccionados.has(selectedOption.value)) {
                     artistasSeleccionados.add(selectedOption.value);
                     
-                    // Crear nueva fila
-                    const row = document.createElement('tr');
+                    const row = tablaBody.insertRow();
                     row.dataset.artistaId = selectedOption.value;
-                    row.innerHTML = `
-                        <td>${selectedOption.text.split(' - ')[0]}</td>
-                        <td>${selectedOption.text.split(' - ')[1]}</td>
-                        <td>
-                            <button type="button" class="btn btn-warning btn-sm btn-editar">
-                                <i class="fas fa-edit"></i> Editar
-                            </button>
-                            <button type="button" class="btn btn-danger btn-sm btn-eliminar">
-                                <i class="fas fa-trash"></i> Eliminar
-                            </button>
-                        </td>
-                    `;
-
-                    // Evento para editar
-                    row.querySelector('.btn-editar').addEventListener('click', function() {
-                        const currentUrl = encodeURIComponent(window.location.href);
-                        
-                        window.location.href = `/artistas/actualizar/${selectedOption.value}?next=${encodeURIComponent(window.location.href)}`;
-                    });
-
-                    // Evento para eliminar
-                    row.querySelector('.btn-eliminar').addEventListener('click', function() {
+                    
+                    const cellNombre = row.insertCell();
+                    cellNombre.textContent = selectedOption.text.split(' - ')[0];
+                    
+                    const cellGenero = row.insertCell();
+                    cellGenero.textContent = selectedOption.text.split(' - ')[1];
+                    
+                    const cellAcciones = row.insertCell();
+                    const btnEditar = document.createElement('button');
+                    btnEditar.type = 'button';
+                    btnEditar.className = 'btn btn-warning btn-sm me-1';
+                    btnEditar.innerHTML = '<i class="fas fa-edit"></i> Editar';
+                    btnEditar.onclick = function() {
+                        window.location.href = `/artistas/actualizar/${selectedOption.value}?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+                    };
+                    
+                    const btnEliminar = document.createElement('button');
+                    btnEliminar.type = 'button';
+                    btnEliminar.className = 'btn btn-danger btn-sm';
+                    btnEliminar.innerHTML = '<i class="fas fa-trash"></i> Eliminar';
+                    btnEliminar.onclick = function() {
                         artistasSeleccionados.delete(selectedOption.value);
                         row.remove();
-                        actualizarHiddenInput();
-                    });
-
-                    tablaBody.appendChild(row);
-                    actualizarHiddenInput();
+                        actualizarHiddenInputArtistas();
+                    };
+                    
+                    cellAcciones.appendChild(btnEditar);
+                    cellAcciones.appendChild(btnEliminar);
+                    
+                    actualizarHiddenInputArtistas();
+                    select.selectedIndex = 0; // Reset select
+                } else if (selectedOption && selectedOption.value && artistasSeleccionados.has(selectedOption.value)) {
+                    alert('Este artista ya ha sido agregado.');
                 }
             });
-
-            // Inicializar tooltips
-            $('[data-toggle="tooltip"]').tooltip();
         });
+    </script>
+
+    <script>
+        // Script para Multimedia
+        const eventoForm = document.getElementById('eventoForm');
+        const hiddenMediaInputsContainer = document.getElementById('hiddenMediaInputsContainer');
+        let imageCount = 0;
+        const MAX_IMAGES = 4;
+        let mediaCounter = 0; // Para IDs únicos de inputs ocultos
+
+        function addFiles() {
+            const tipo = document.getElementById('tipo_archivo_media').value;
+            const descripcionInput = document.getElementById('descripcion_media');
+            const descripcion = descripcionInput.value.trim();
+            const previewContainer = document.getElementById('file-preview');
+            const limiteAlerta = document.getElementById('limite-alerta');
+
+            if (tipo === 'imagen') {
+                if (imageCount >= MAX_IMAGES) {
+                    alert(`Solo puedes agregar un máximo de ${MAX_IMAGES} imágenes.`);
+                    limiteAlerta.textContent = `Has alcanzado el límite de ${MAX_IMAGES} imágenes.`;
+                    return;
+                }
+        
+                const modalFileInput = document.getElementById('fileInput');
+                if (modalFileInput.files.length > 0) {
+                    const file = modalFileInput.files[0];
+                    mediaCounter++; // Incrementa para ID único
+
+                    // 1. Clonar el input de archivo para el formulario principal
+                    const stagedFileInput = modalFileInput.cloneNode(true); // Clona el input del modal
+                    stagedFileInput.id = 'staged_file_' + mediaCounter;
+                    stagedFileInput.name = 'archivos'; // Flask usará request.files.getlist('archivos')
+                    // No es necesario mostrarlo, se añade al contenedor de inputs ocultos
+                    // stagedFileInput.style.display = 'none'; // El contenedor ya está oculto
+                    hiddenMediaInputsContainer.appendChild(stagedFileInput);
+
+                    // 2. Crear input oculto para la descripción del archivo
+                    const descHiddenInput = document.createElement('input');
+                    descHiddenInput.type = 'hidden';
+                    descHiddenInput.name = 'descripciones_archivos';
+                    descHiddenInput.value = descripcion;
+                    descHiddenInput.id = 'desc_file_' + mediaCounter;
+                    hiddenMediaInputsContainer.appendChild(descHiddenInput);
+                    
+                    // 3. Crear previsualización
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        const previewItem = document.createElement('div');
+                        previewItem.className = 'preview-item position-relative d-inline-block m-2 p-2 border rounded';
+                        previewItem.dataset.mediaId = mediaCounter; // Referencia para eliminar
+                        previewItem.dataset.type = 'imagen';
+
+                        previewItem.innerHTML = `
+                            <img src="${e.target.result}" alt="${descripcion || file.name}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 4px;">
+                            <button type="button" class="btn-close position-absolute top-0 end-0 p-1" aria-label="Eliminar imagen" onclick="removeMediaItem(this.parentElement)"></button>
+                            <p style="font-size: 0.75em; text-align: center; width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 5px;" title="${descripcion || file.name}">${descripcion || file.name}</p>
+                        `;
+                        previewContainer.appendChild(previewItem);
+                        imageCount++;
+                        limiteAlerta.textContent = `Has cargado ${imageCount} de ${MAX_IMAGES} imágenes.`;
+                    };
+                    reader.readAsDataURL(file);
+                    modalFileInput.value = ''; // Limpiar input del modal para la siguiente selección
+                } else {
+                    alert("Por favor, selecciona un archivo de imagen.");
+                    return;
+                }
+            } else if (tipo === 'video') {
+                const modalUrlInput = document.getElementById('urlInput');
+                const videoUrl = modalUrlInput.value.trim();
+                if (videoUrl) {
+                     if (!videoUrl.toLowerCase().startsWith('http://') && !videoUrl.toLowerCase().startsWith('https://')) {
+                        alert('Por favor, ingresa una URL válida (que comience con http:// o https://).');
+                        return;
+                    }
+                    mediaCounter++;
+
+                    // 1. Crear input oculto para la URL del video
+                    const urlHiddenInput = document.createElement('input');
+                    urlHiddenInput.type = 'hidden';
+                    urlHiddenInput.name = 'urls_video'; 
+                    urlHiddenInput.value = videoUrl;
+                    urlHiddenInput.id = 'url_video_' + mediaCounter;
+                    hiddenMediaInputsContainer.appendChild(urlHiddenInput);
+
+                    // 2. Crear input oculto para la descripción del video
+                    const descHiddenInput = document.createElement('input');
+                    descHiddenInput.type = 'hidden';
+                    descHiddenInput.name = 'descripciones_urls';
+                    descHiddenInput.value = descripcion;
+                    descHiddenInput.id = 'desc_video_' + mediaCounter;
+                    hiddenMediaInputsContainer.appendChild(descHiddenInput);
+                    
+                    // 3. Crear previsualización
+                    const previewItem = document.createElement('div');
+                    previewItem.className = 'preview-item position-relative d-inline-block m-2 p-2 border rounded';
+                    previewItem.dataset.mediaId = mediaCounter;
+                    previewItem.dataset.type = 'video';
+
+                    previewItem.innerHTML = `
+                        <iframe src="${formatVideoURL(videoUrl)}" frameborder="0" allowfullscreen style="width: 180px; height: 100px; border-radius: 4px;"></iframe>
+                        <button type="button" class="btn-close position-absolute top-0 end-0 p-1" aria-label="Eliminar video" onclick="removeMediaItem(this.parentElement)"></button>
+                        <p style="font-size: 0.75em; text-align: center; width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 5px;" title="${descripcion || videoUrl}">${descripcion || videoUrl}</p>
+                    `;
+                    previewContainer.appendChild(previewItem);
+                    modalUrlInput.value = ''; // Limpiar input del modal
+                } else {
+                    alert("Por favor, ingresa la URL del video.");
+                    return;
+                }
+            }
+            
+            descripcionInput.value = ''; // Limpiar descripción del modal para el siguiente
+            // No cerrar el modal automáticamente; el usuario puede querer agregar más.
+            // const mediaModal = bootstrap.Modal.getInstance(document.getElementById('mediaModal'));
+            // mediaModal.hide(); 
+        }
+
+        function removeMediaItem(previewElement) {
+            const mediaId = previewElement.dataset.mediaId;
+            const type = previewElement.dataset.type;
+            const limiteAlerta = document.getElementById('limite-alerta');
+
+            if (type === 'imagen') {
+                const stagedFile = document.getElementById('staged_file_' + mediaId);
+                if (stagedFile) stagedFile.remove();
+                const descFile = document.getElementById('desc_file_' + mediaId);
+                if (descFile) descFile.remove();
+                imageCount--;
+                limiteAlerta.textContent = imageCount > 0 ? `Has cargado ${imageCount} de ${MAX_IMAGES} imágenes.` : '';
+            } else if (type === 'video') {
+                const urlVideo = document.getElementById('url_video_' + mediaId);
+                if (urlVideo) urlVideo.remove();
+                const descVideo = document.getElementById('desc_video_' + mediaId);
+                if (descVideo) descVideo.remove();
+            }
+            previewElement.remove();
+        }
+        
+        function formatVideoURL(url) {
+            let embedUrl = url;
+            try {
+                const urlObj = new URL(url); // Valida la URL básica
+                if (urlObj.hostname.includes('youtube.com') || urlObj.hostname.includes('youtu.be')) {
+                    let videoId = urlObj.searchParams.get('v');
+                    if (!videoId && urlObj.hostname.includes('youtu.be')) {
+                        videoId = urlObj.pathname.substring(1);
+                    }
+                    if (videoId) embedUrl = `https://www.youtube.com/embed/${videoId}`;
+                } else if (urlObj.hostname.includes('vimeo.com')) {
+                    const pathParts = urlObj.pathname.split('/');
+                    const videoId = pathParts[pathParts.length - 1];
+                    if (videoId) embedUrl = `https://player.vimeo.com/video/${videoId}`;
+                }
+            } catch (e) {
+                console.error("Error al parsear URL de video:", e);
+                return url; // Devuelve original si hay error
+            }
+            return embedUrl;
+        }
+        
+        document.getElementById('tipo_archivo_media').addEventListener('change', function () {
+            const tipo = this.value;
+            document.getElementById('fileInputGroup').style.display = tipo === 'imagen' ? 'block' : 'none';
+            document.getElementById('urlInputGroup').style.display = tipo === 'video' ? 'block' : 'none';
+        });
+
+        // Inicializar visibilidad de campos del modal
+        document.getElementById('fileInputGroup').style.display = 'block';
+        document.getElementById('urlInputGroup').style.display = 'none';
     </script>
 </body>
 </html>

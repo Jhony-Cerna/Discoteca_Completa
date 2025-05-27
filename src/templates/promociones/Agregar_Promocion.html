@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agregar Promoción</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/agregar_promocion.css') }}">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .contenedor-form { max-width: 700px; margin: auto; padding: 20px; }
+        .campo { margin-bottom: 1rem; }
+        .fechas { display: flex; justify-content: space-between; }
+        .fechas .campo { flex-basis: 48%; }
+    </style>
+</head>
+<body>
+    <main class="container contenedor-form mt-4">
+        <h1>Agregar Promoción</h1>
+        <hr>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <form id="form-promocion" method="POST" action="{{ url_for('promociones.agregar_promocion') }}">
+            <div class="form-group campo">
+                <label for="id_producto">Producto*</label>
+                <select id="id_producto" name="id_producto" class="form-control" required>
+                    <option value="" disabled {% if not form_data or not form_data.id_producto %}selected{% endif %}>Seleccionar producto</option>
+                    {% if productos %}
+                        {% for producto in productos %}
+                            <option value="{{ producto.id_producto }}" {% if form_data and form_data.id_producto == producto.id_producto|string %}selected{% endif %}>{{ producto.nombre }}</option>
+                        {% endfor %}
+                    {% else %}
+                         <option value="" disabled>No hay productos elegibles para promoción</option>
+                    {% endif %}
+                </select>
+                <small class="form-text text-muted">Solo productos marcados para promoción.</small>
+            </div>
+
+            <div class="form-group campo">
+                <label for="nombre">Nombre de la promoción*</label>
+                <input type="text" id="nombre" name="nombre" class="form-control" placeholder="Ej. Promo Verano" value="{{ form_data.nombre if form_data else '' }}" required />
+            </div>
+
+            <div class="form-group campo">
+                <label for="descripcion">Descripción</label>
+                <textarea id="descripcion" name="descripcion" class="form-control" rows="3" placeholder="Describe la promoción">{{ form_data.descripcion if form_data else '' }}</textarea>
+            </div>
+
+            <div class="form-group campo">
+                <label for="precio_regular">Precio regular (S/)*</label>
+                <input type="number" id="precio_regular" name="precio_regular" class="form-control" step="0.01" min="0" value="{{ form_data.precio_regular if form_data else '' }}" required />
+                <small class="form-text text-muted">Se sugiere que este campo se auto-rellene al seleccionar un producto (requiere JavaScript).</small>
+            </div>
+
+            <div class="form-group campo">
+                <label for="porcentaje_descuento">Descuento (%)*</label>
+                <input type="number" id="porcentaje_descuento" name="porcentaje_descuento" class="form-control" step="0.01" min="0" max="100" value="{{ form_data.porcentaje_descuento if form_data else '' }}" required />
+            </div>
+
+            <div class="form-group campo">
+                <label for="cantidad_minima">Cantidad mínima*</label>
+                <input type="number" id="cantidad_minima" name="cantidad_minima" class="form-control" min="1" value="{{ form_data.cantidad_minima if form_data else '1' }}" required />
+            </div>
+
+            <div class="form-group campo">
+                <label for="precio_final">Precio final (S/)*</label>
+                <input type="number" id="precio_final" name="precio_final" class="form-control" step="0.01" min="0" value="{{ form_data.precio_final if form_data else '' }}" required />
+                 <small class="form-text text-muted">Se sugiere que este campo se calcule automáticamente (requiere JavaScript).</small>
+            </div>
+
+            <div class="fechas">
+                <div class="form-group campo">
+                    <label for="inicio">Fecha inicio*</label>
+                    <input type="date" id="inicio" name="inicio" class="form-control" value="{{ form_data.inicio if form_data else '' }}" required />
+                </div>
+                <div class="form-group campo">
+                    <label for="fin">Fecha fin*</label>
+                    <input type="date" id="fin" name="fin" class="form-control" value="{{ form_data.fin if form_data else '' }}" required />
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block">Guardar Promoción</button>
+            <a href="{{ url_for('promociones.listar_promociones') }}" class="btn btn-secondary btn-block mt-2">Cancelar</a>
+        </form>
+    </main>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        // Opcional: Lógica JavaScript para auto-rellenar precio regular o calcular precio final
+        document.addEventListener('DOMContentLoaded', function() {
+            const productoSelect = document.getElementById('id_producto');
+            const precioRegularInput = document.getElementById('precio_regular');
+            const porcentajeDescuentoInput = document.getElementById('porcentaje_descuento');
+            const precioFinalInput = document.getElementById('precio_final');
+
+            // Suponiendo que tienes una forma de obtener los precios de los productos
+            // Esto es un ejemplo, necesitarías pasar los datos de los productos a JavaScript
+            // o hacer una llamada AJAX.
+            const productosData = {
+                {% if productos %}
+                    {% for producto in productos %}
+                        "{{ producto.id_producto }}": { "precio": "{{ producto.precio_regular }}" }{% if not loop.last %},{% endif %}
+                    {% endfor %}
+                {% endif %}
+            };
+
+            if (productoSelect) {
+                productoSelect.addEventListener('change', function() {
+                    const selectedProductId = this.value;
+                    if (productosData[selectedProductId]) {
+                        precioRegularInput.value = parseFloat(productosData[selectedProductId].precio).toFixed(2);
+                        calcularPrecioFinal(); // Recalcular si cambia el producto
+                    } else {
+                        precioRegularInput.value = '';
+                    }
+                });
+            }
+
+            function calcularPrecioFinal() {
+                const precioRegular = parseFloat(precioRegularInput.value);
+                const descuento = parseFloat(porcentajeDescuentoInput.value);
+
+                if (!isNaN(precioRegular) && !isNaN(descuento)) {
+                    if (descuento >= 0 && descuento <= 100) {
+                        const precioConDescuento = precioRegular * (1 - (descuento / 100));
+                        precioFinalInput.value = precioConDescuento.toFixed(2);
+                    } else {
+                        precioFinalInput.value = ''; // o mostrar un error
+                    }
+                } else {
+                    precioFinalInput.value = '';
+                }
+            }
+
+            if (precioRegularInput) precioRegularInput.addEventListener('input', calcularPrecioFinal);
+            if (porcentajeDescuentoInput) porcentajeDescuentoInput.addEventListener('input', calcularPrecioFinal);
+
+            // Si hay datos de formulario previos (por un error de validación, por ejemplo)
+            // y se seleccionó un producto, intentar cargar su precio regular.
+            if (productoSelect && productoSelect.value && productosData[productoSelect.value] && !precioRegularInput.value) {
+                 precioRegularInput.value = parseFloat(productosData[productoSelect.value].precio).toFixed(2);
+            }
+            // Si hay datos, intentar calcular el precio final al cargar.
+            if (precioRegularInput.value && porcentajeDescuentoInput.value && !precioFinalInput.value) {
+                calcularPrecioFinal();
+            }
+        });
+    </script>
+</body>
+</html>

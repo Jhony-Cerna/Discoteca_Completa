@@ -1,153 +1,365 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Actualizar Mesas y Boxes</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/stilesAgregar.css') }}">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        /* Añadir esta clase si no está en tu CSS */
-        .hidden {
-            display: none !important;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Actualizar Mesas y Boxes</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='CSS/stilesAgregar.css') }}">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .media-preview-item {
+      position: relative;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 10px;
+      margin: 10px 0;
+    }
+    .delete-media-btn {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background: red;
+      color: white;
+      border-radius: 50%;
+      width: 25px;
+      height: 25px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .preview-thumbnail {
+      max-width: 200px;
+      max-height: 150px;
+      object-fit: cover;
+      border-radius: 6px;
+    }
+  </style>
 </head>
 <body>
-    <header>
-        <h1>Formulario para Actualizar Mesas y Boxes</h1>
-    </header>
+<header>
+  <h1>Formulario para Actualizar Mesas y Boxes</h1>
+</header>
 
-    {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            {% for message in messages %}
-            <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+<div class="form-container">
+  <form action="{{ url_for('mesasyboxes.actualizar_mesasybox', id_producto=producto.id_producto) }}" 
+        method="POST" 
+        enctype="multipart/form-data">
+    <input type="hidden" name="_method" value="PUT">
+    <input type="hidden" name="deleted_media" id="deletedMediaIds" value="">
+
+    <!-- Campos del producto -->
+    <div class="form-group">
+      <label for="tipo">Tipo:</label>
+      <select id="tipo" name="tipo" required>
+        <option value="box" {% if producto.tipo == 'box' %}selected{% endif %}>Box</option>
+        <option value="mesa" {% if producto.tipo == 'mesa' %}selected{% endif %}>Mesa</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="nombre">Nombre:</label>
+      <input type="text" id="nombre" name="nombre" value="{{ producto.nombre }}" required>
+    </div>
+
+    <div class="form-group">
+      <label for="descripcion">Descripción:</label>
+      <textarea id="descripcion" name="descripcion" rows="4">{{ producto.descripcion }}</textarea>
+    </div>
+
+    <div class="form-group">
+      <label for="precio_regular">Precio Regular:</label>
+      <input type="number" id="precio_regular" name="precio_regular" step="0.01" 
+             value="{{ producto.precio_regular }}" required>
+    </div>
+
+    <div class="form-group">
+      <label for="promocion">Promoción:</label>
+      <input type="checkbox" id="promocion" name="promocion" 
+             {% if producto.promocion %}checked{% endif %}>
+    </div>
+
+    <!-- Campos del espacio -->
+    {% if espacio %}
+      <div class="form-group">
+        <label for="capacidad">Capacidad:</label>
+        <input type="number" id="capacidad" name="capacidad" 
+               value="{{ espacio.capacidad }}" required>
+      </div>
+
+      <div class="form-group">
+        <label for="tamanio">Tamaño:</label>
+        <select id="tamanio" name="tamanio">
+          <option value="standard" {% if espacio.tamanio == 'standard' %}selected{% endif %}>Standard</option>
+          <option value="chico" {% if espacio.tamanio == 'chico' %}selected{% endif %}>Chico</option>
+          <option value="mediano" {% if espacio.tamanio == 'mediano' %}selected{% endif %}>Mediano</option>
+          <option value="grande" {% if espacio.tamanio == 'grande' %}selected{% endif %}>Grande</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="contenido">Contenido:</label>
+        <textarea id="contenido" name="contenido" rows="4">{{ espacio.contenido }}</textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="estado">Estado:</label>
+        <select id="estado" name="estado" required>
+          <option value="disponible" {% if espacio.estado == 'disponible' %}selected{% endif %}>Disponible</option>
+          <option value="pagado" {% if espacio.estado == 'pagado' %}selected{% endif %}>Pagado</option>
+          <option value="separado" {% if espacio.estado == 'separado' %}selected{% endif %}>Separado</option>
+          <option value="no disponible" {% if espacio.estado == 'no disponible' %}selected{% endif %}>No disponible</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>¿Tiene reserva?</label>
+        <input type="checkbox" id="reserva_checkbox" name="tiene_reserva" 
+               {% if espacio.reserva %}checked{% endif %}>
+      </div>
+
+      <div class="form-group" id="reserva_field" 
+           {% if not espacio.reserva %}style="display:none;"{% endif %}>
+        <label for="reserva_precio">Precio de reserva:</label>
+        <input type="number" name="reserva_precio" step="0.01" 
+               value="{{ espacio.reserva if espacio.reserva else '' }}">
+      </div>
+    {% endif %}
+
+    <!-- Multimedia existente -->
+    <div class="form-group">
+      <label>Multimedia Actual:</label>
+      <div class="row">
+        {% for media in archivos_multimedia %}
+          <div class="col-md-4 media-preview-item">
+            <div class="position-relative">
+              {% if media.Tipo_Archivo == 'imagen' %}
+                <img src="{{ url_for('static', filename='uploads/' + media.Archivo) }}" 
+                     class="preview-thumbnail">
+              {% elif media.Tipo_Archivo == 'video' %}
+                <iframe src="{{ media.Archivo|format_video_url }}" 
+                        class="preview-thumbnail"
+                        frameborder="0" 
+                        allowfullscreen></iframe>
+              {% endif %}
+              <div class="delete-media-btn" 
+                onclick="toggleDeleteMedia({{ media.Id_imgV|tojson }}, this)">
+                ×
+                </div>
             </div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
-
-    <div id="image-preview">
-        {% if espacio and espacio.ubicacion %}
-            <img src="{{ url_for('static', filename=espacio.ubicacion.replace('static/', '')) }}" alt="Imagen actual">
+          </div>
         {% else %}
-            <span>Vista previa de la imagen</span>
-        {% endif %}
+          <p>No hay multimedia adjunta</p>
+        {% endfor %}
+      </div>
     </div>
 
-    <div class="form-container">
-        <form action="{{ url_for('mesasyboxes.actualizar_mesasybox', id_producto=producto.id_producto) }}" method="POST">
-            <input type="hidden" name="_method" value="PUT">
-            <input type="hidden" name="id" value="{{ producto.id_producto }}">
-
-            <!-- Resto del Formulario -->
-            <div class="form-group">
-                <label for="tipo">Tipo:</label>
-                <select id="tipo" name="tipo" required>
-                    <option value="box" {% if producto.tipo == 'box' %}selected{% endif %}>Box</option>
-                    <option value="mesa" {% if producto.tipo == 'mesa' %}selected{% endif %}>Mesa</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="nombre">Nombre:</label>
-                <input type="text" id="nombre" name="nombre" value="{{ producto.nombre }}" required>
-            </div>
-
-            <div class="form-group">
-                <label for="descripcion">Descripción:</label>
-                <textarea id="descripcion" name="descripcion" rows="4" required>{{ producto.descripcion }}</textarea>
-            </div>
-
-            <div class="form-group">
-                <label for="precio_regular">Precio Regular:</label>
-                <input type="number" id="precio_regular" name="precio_regular" value="{{ producto.precio_regular }}" step="0.01" required>
-            </div>
-
-            <!-- Sección de Reserva Corregida -->
-            <div class="form-group">
-                <label for="reserva_checkbox">Reserva:</label>
-                <input 
-                    type="checkbox" 
-                    id="reserva_checkbox" 
-                    name="tiene_reserva"
-
-                    {% if espacio.reserva is not none and espacio.reserva > 0 %} checked {% endif %}
-                    onchange="toggleReservaField()"
-                >
-                <span>¿Tiene reserva?</span>
-            </div>
-
-            <div 
-                class="form-group {% if espacio.reserva is none %}hidden{% endif %}" 
-                id="reserva_field"
-            >
-                <label for="reserva_precio">Precio de la reserva:</label>
-                <input 
-                    type="number" 
-                    id="reserva_precio" 
-                    name="reserva_precio" 
-                    step="0.01"
-                    value="{{ espacio.reserva if espacio.reserva is not none else '' }}"
-                    {{ 'required' if espacio.reserva is not none else '' }}
-                >
-            </div>
-
-            <div class="form-group">
-                <label for="promocion">Promoción:</label>
-                <input type="checkbox" id="promocion" name="promocion" {% if producto.promocion == 1 %}checked{% endif %}>
-            </div>
-
-            {% if espacio %}
-            <div class="form-group">
-                <label for="capacidad">Capacidad:</label>
-                <input type="number" id="capacidad" name="capacidad" value="{{ espacio.capacidad }}" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="tamanio">Tamaño:</label>
-                <select id="tamanio" name="tamanio" required>
-                    <option value="">Seleccione una opción</option>
-                    <option value="standard" {% if espacio.tamanio == 'standard' %}selected{% endif %}>Standard</option>
-                    <option value="chico" {% if espacio.tamanio == 'chico' %}selected{% endif %}>Chico</option>
-                    <option value="mediano" {% if espacio.tamanio == 'mediano' %}selected{% endif %}>Mediano</option>
-                    <option value="grande" {% if espacio.tamanio == 'grande' %}selected{% endif %}>Grande</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label for="contenido">Contenido:</label>
-                <textarea id="contenido" name="contenido" rows="4" required>{{ espacio.contenido }}</textarea>
-            </div>
-
-            <div class="form-group">
-                <label for="estado">Estado:</label>
-                <select id="estado" name="estado" required>
-                    <option value="disponible" {% if espacio.estado == 'disponible' %}selected{% endif %}>Disponible</option>
-                    <option value="pagado" {% if espacio.estado == 'pagado' %}selected{% endif %}>Pagado</option>
-                    <option value="separado" {% if espacio.estado == 'separado' %}selected{% endif %}>Separado</option>
-                    <option value="no disponible" {% if espacio.estado == 'no disponible' %}selected{% endif %}>No disponible</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="ubicacion">Ubicación (imagen):</label>
-                <input type="file" id="ubicacion" name="ubicacion" accept="image/*">
-                {% if espacio.ubicacion %}
-                    <p>Imagen actual: <a href="{{ espacio.ubicacion }}" target="_blank">Ver imagen</a></p>
-                {% endif %}
-            </div>
-            {% endif %}
-
-            <div class="form-group">
-                <button type="submit">Actualizar</button>
-            </div>
-        </form>
+    <!-- Nueva multimedia -->
+    <div class="form-group">
+      <label>Agregar Nueva Multimedia:</label>
+      <button type="button" class="btn btn-secondary" 
+              data-bs-toggle="modal" 
+              data-bs-target="#mediaModal">
+        <i class="fas fa-plus"></i> Agregar Archivos
+      </button>
+      <div id="new-media-preview" class="row mt-3"></div>
     </div>
 
-    <!-- JavaScript Corregido -->
-    <script src="{{ url_for('static', filename='js/visibleActualizar_Reserva.js') }}"></script>
+    <!-- Inputs para nuevos archivos -->
+    <input type="file" name="archivos" id="hiddenFileInput" multiple class="d-none">
+    <input type="hidden" name="urls_video" id="hiddenVideoUrls" value="">
+
+    <button type="submit" class="btn btn-primary mt-3">Actualizar</button>
+  </form>
+</div>
+
+<!-- Modal para multimedia -->
+<div class="modal fade" id="mediaModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Agregar Multimedia</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Descripción</label>
+          <textarea class="form-control" id="mediaDescription"></textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Tipo de Archivo</label>
+          <select class="form-select" id="mediaType">
+            <option value="imagen">Imagen</option>
+            <option value="video">Video</option>
+          </select>
+        </div>
+        <div class="mb-3" id="modalFileInput">
+          <label class="form-label">Seleccionar Archivo</label>
+          <input type="file" class="form-control" accept="image/*" id="fileInput">
+        </div>
+        <div class="mb-3 d-none" id="modalUrlInput">
+          <label class="form-label">URL del Video</label>
+          <input type="url" class="form-control" id="videoUrl">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="handleMediaAddition()">Agregar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Función principal para manejar la eliminación de medios
+    function toggleDeleteMedia(mediaId, element) {
+        // Obtener el input oculto con los IDs a eliminar
+        const deletedIdsInput = document.getElementById('deletedMediaIds');
+        
+        // Convertir el valor actual a array
+        let currentIds = [];
+        if (deletedIdsInput.value) {
+            currentIds = deletedIdsInput.value.split(',');
+        }
+    
+        // Buscar el ID en el array
+        const index = currentIds.indexOf(mediaId.toString());
+    
+        if (index === -1) {
+            // Si no existe: agregar y marcar visualmente
+            currentIds.push(mediaId.toString());
+            element.parentElement.style.opacity = '0.4';
+            element.parentElement.style.border = '2px solid red';
+        } else {
+            // Si existe: quitar y restaurar apariencia
+            currentIds.splice(index, 1);
+            element.parentElement.style.opacity = '1';
+            element.parentElement.style.border = 'none';
+        }
+    
+        // Actualizar el valor del input oculto
+        deletedIdsInput.value = currentIds.join(',');
+        
+        // Debug: mostrar estado actual (opcional)
+        console.log('IDs marcados para eliminar:', currentIds);
+    }
+    
+    // Función para formatear URLs de video
+    function formatVideoUrl(url) {
+        // YouTube: watch?v= → embed/
+        if (url.includes('youtube.com/watch?v=')) {
+            return url.replace('watch?v=', 'embed/');
+        }
+        // YouTube Shorts: youtu.be/ → embed/
+        if (url.includes('youtu.be/')) {
+            return url.replace('youtu.be/', 'youtube.com/embed/');
+        }
+        // Vimeo: normal → player
+        if (url.includes('vimeo.com/')) {
+            return url.replace('vimeo.com/', 'player.vimeo.com/video/');
+        }
+        return url;
+    }
+    
+    // Configuración inicial del modal
+    document.addEventListener('DOMContentLoaded', () => {
+        // Manejar cambio de tipo en el modal
+        document.getElementById('mediaType').addEventListener('change', function(e) {
+            document.getElementById('modalFileInput').classList.toggle('d-none', e.target.value !== 'imagen');
+            document.getElementById('modalUrlInput').classList.toggle('d-none', e.target.value !== 'video');
+        });
+    
+        // Manejar visibilidad del campo de reserva
+        const reservaCheckbox = document.getElementById('reserva_checkbox');
+        if (reservaCheckbox) {
+            reservaCheckbox.addEventListener('change', function() {
+                document.getElementById('reserva_field').style.display = 
+                    this.checked ? 'block' : 'none';
+            });
+        }
+    });
+    
+    // Función para agregar nuevos medios desde el modal
+    function handleMediaAddition() {
+        const mediaType = document.getElementById('mediaType').value;
+        const previewContainer = document.getElementById('new-media-preview');
+        
+        if (mediaType === 'imagen') {
+            handleImageUpload(previewContainer);
+        } else if (mediaType === 'video') {
+            handleVideoUrl(previewContainer);
+        }
+        
+        // Resetear campos del modal
+        document.getElementById('fileInput').value = '';
+        document.getElementById('videoUrl').value = '';
+        bootstrap.Modal.getInstance(document.getElementById('mediaModal')).hide();
+    }
+    
+    // Manejo de imágenes
+    function handleImageUpload(previewContainer) {
+        const fileInput = document.getElementById('fileInput');
+        const hiddenFileInput = document.getElementById('hiddenFileInput');
+        
+        // Transferir archivos al input oculto
+        const dataTransfer = new DataTransfer();
+        Array.from(hiddenFileInput.files).forEach(file => dataTransfer.items.add(file));
+        Array.from(fileInput.files).forEach(file => dataTransfer.items.add(file));
+        hiddenFileInput.files = dataTransfer.files;
+    
+        // Crear previsualizaciones
+        Array.from(fileInput.files).forEach(file => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const div = document.createElement('div');
+                div.className = 'col-md-4 media-preview-item mb-3';
+                div.innerHTML = `
+                    <img src="${e.target.result}" class="preview-thumbnail">
+                    <div class="delete-media-btn" onclick="this.parentElement.remove()">×</div>
+                `;
+                previewContainer.appendChild(div);
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+    
+    // Manejo de videos por URL
+    function handleVideoUrl(previewContainer) {
+        const videoUrl = document.getElementById('videoUrl').value;
+        const hiddenUrls = document.getElementById('hiddenVideoUrls');
+        
+        // Validar URL
+        if (!videoUrl) return;
+        
+        // Agregar al input oculto
+        const urls = hiddenUrls.value ? hiddenUrls.value.split(',') : [];
+        urls.push(videoUrl);
+        hiddenUrls.value = urls.join(',');
+    
+        // Crear previsualización
+        const div = document.createElement('div');
+        div.className = 'col-md-4 media-preview-item mb-3';
+        div.innerHTML = `
+            <iframe src="${formatVideoUrl(videoUrl)}" 
+                    class="preview-thumbnail"
+                    frameborder="0"
+                    allowfullscreen></iframe>
+            <div class="delete-media-btn" onclick="this.parentElement.remove()">×</div>
+        `;
+        previewContainer.appendChild(div);
+    }
+    </script>
 </body>
 </html>

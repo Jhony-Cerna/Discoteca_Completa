@@ -81,6 +81,14 @@ def agregar_mesasyboxes():
 
         # 4. Validar archivos
         archivos = request.files.getlist('archivos')
+
+        # Contar cuántas son imágenes
+        imagenes = [f for f in archivos if f and f.filename and f.content_type.startswith('image')]
+
+        if len(imagenes) > 4:
+            flash("Solo puedes subir un máximo de 4 imágenes.", "danger")
+            return redirect(url_for('mesasyboxes.agregar_mesasyboxes_form'))
+
         for file in archivos:
             if file.filename != '' and not allowed_file(file.filename, current_app.config['ALLOWED_EXTENSIONS']):
                 flash("Tipo de archivo no permitido", "danger")
@@ -113,20 +121,38 @@ def agregar_mesasyboxes():
         # 7. Manejar archivos multimedia
         for file in archivos:
             if file and file.filename:
-                filename = secure_filename_wrapper(file.filename)
-                file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-                file.save(file_path)
-                nuevo_media = ImagenVideo(
-                    Id_Discoteca=id_discoteca,
-                    Tipo_Tabla='espacios',
-                    Id_referenciaTabla=nuevo_producto.id_producto,
-                    Descripcion=request.form.get('descripcion_media', ''),
-                    Tipo_Archivo='imagen' if file.content_type.startswith('image') else 'video',
-                    Archivo=filename
-                )
-                db.session.add(nuevo_media)
+                tipo_archivo = 'imagen' if file.content_type.startswith(
+            'image') else 'video'
+
+        filename = secure_filename_wrapper(file.filename)
+        file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+
+        # Ahora crea un registro de ImagenVideo POR CADA ARCHIVO
+        nuevo_media = ImagenVideo(
+            Id_Discoteca=id_discoteca,
+            Tipo_Tabla='espacios',
+            Id_referenciaTabla=nuevo_producto.id_producto,
+            Descripcion=request.form.get('descripcion_media', ''),
+            Tipo_Archivo=tipo_archivo,
+            Archivo=filename
+        )
+        db.session.add(nuevo_media)
+
+# Si quieres manejar también un posible video externo por URL:
+        if request.form.get('url_video'):
+            nuevo_media = ImagenVideo(
+            Id_Discoteca=id_discoteca,
+            Tipo_Tabla='espacios',
+            Id_referenciaTabla=nuevo_producto.id_producto,
+            Descripcion=request.form.get('descripcion_media', ''),
+            Tipo_Archivo='video',
+            Archivo=request.form['url_video']
+    )
+        db.session.add(nuevo_media)
 
         db.session.commit()
+
         flash("Registro exitoso con multimedia", "success")
         return redirect(url_for('mesasyboxes.obtener_mesasyboxes'))
 
@@ -140,22 +166,44 @@ def agregar_mesasyboxes():
         db.session.rollback()
         current_app.logger.error(f"Error: {str(e)}")
         flash("Error interno al procesar la solicitud", "danger")
-    
+
     return redirect(url_for('mesasyboxes.agregar_mesasyboxes_form'))
 
 @mesasyboxes_bp.route('/editar/<int:id_producto>', methods=['GET'])
 def editar_mesasybox(id_producto):
-    """Carga la página de edición con los datos del producto y su espacio."""
     producto = Producto.query.get(id_producto)
     if producto is None:
         return "Producto no encontrado", 404
 
     espacio = Espacio.query.filter_by(id_producto=id_producto).first()
+    archivos_multimedia = ImagenVideo.query.filter_by(
+        Tipo_Tabla='espacios',
+        Id_referenciaTabla=id_producto
+    ).all()
 
-    print("Producto:", producto)
-    print("Espacio:", espacio)  # Verificar si el espacio se obtiene
+    return render_template('Actualizar_Box.html', producto=producto, espacio=espacio, archivos_multimedia=archivos_multimedia)
 
-    return render_template('Actualizar_Box.html', producto=producto, espacio=espacio)
+@mesasyboxes_bp.route('/eliminar_media/<int:id_media>', methods=['POST'])
+def eliminar_media_archivo(id_media):
+    if request.form.get('_method') == 'DELETE':
+        try:
+            media = ImagenVideo.query.get_or_404(id_media)
+
+            # Elimina el archivo físico si es imagen
+            if media.Tipo_Archivo == 'imagen':
+                ruta_archivo = os.path.join(current_app.config['UPLOAD_FOLDER'], media.Archivo)
+                if os.path.exists(ruta_archivo):
+                    os.remove(ruta_archivo)
+
+            db.session.delete(media)
+            db.session.commit()
+            flash("Archivo multimedia eliminado", "success")
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error al eliminar: {str(e)}", "danger")
+
+    return redirect(request.referrer or url_for('mesasyboxes.obtener_mesasyboxes'))
 
 
 @mesasyboxes_bp.route('/<int:id_producto>', methods=['GET'])
@@ -185,52 +233,114 @@ def obtener_mesasybox(id_producto):
 
 @mesasyboxes_bp.route('/editar/<int:id_producto>', methods=['POST'])
 def actualizar_mesasybox(id_producto):
-    """Actualiza el producto y su espacio."""
-    if request.form.get('_method') == 'PUT':
-        try:
-            # Obtener datos del formulario
-            data = request.form
+    print("🟢 Se envió el formulario correctamente.")
+    print("🟢 Método detectado:", request.method)
+    print("🟢 _method:", request.form.get('_method'))
 
-            # Buscar el producto y su espacio
-            producto = Producto.query.get_or_404(id_producto)
-            espacio = Espacio.query.filter_by(id_producto=id_producto).first()
+    try:
+        data = request.form
+        producto = Producto.query.get_or_404(id_producto)
+        espacio = Espacio.query.filter_by(id_producto=id_producto).first()
 
-            # Actualizar campos del producto
-            producto.tipo = data.get('tipo', producto.tipo)
-            producto.nombre = data.get('nombre', producto.nombre)
-            producto.descripcion = data.get('descripcion', producto.descripcion)
-            producto.precio_regular = float(data.get('precio_regular', producto.precio_regular))
-            espacio.reserva = float(data.get('reserva_precio', 0.0))  # Si está vacío, será 0.0
-            producto.promocion = int(data.get('promocion', 0))
+        # Actualizar datos del producto
+        producto.tipo = data.get('tipo', producto.tipo)
+        producto.nombre = data.get('nombre', producto.nombre)
+        producto.descripcion = data.get('descripcion', producto.descripcion)
+        producto.precio_regular = float(data.get('precio_regular', producto.precio_regular))
+        # Para checkboxes, 'on' es el valor si está marcado, None si no.
+        producto.promocion = 1 if data.get('promocion') == 'on' else 0
 
-            # Actualizar campos del espacio (si existe)
-            if espacio:
-                espacio.capacidad = int(data.get('capacidad', espacio.capacidad))
-                espacio.tamanio = data.get('tamanio', espacio.tamanio)
-                espacio.contenido = data.get('contenido', espacio.contenido)
-                espacio.estado = data.get('estado', espacio.estado)
 
-                # Manejar reserva
-                if 'reserva' in data:  # Checkbox marcado
-                    reserva_precio = data.get('reserva_precio', '0')
-                    try:
-                        espacio.reserva = float(reserva_precio) if reserva_precio else None
-                    except ValueError:
-                        flash("El precio de reserva debe ser un número válido", "error")
-                        return redirect(url_for('mesasyboxes.obtener_mesasyboxes'))
-                else:  # Checkbox desmarcado
-                    espacio.reserva = None  # Guardar como NULL (N/A)
+        # Actualizar datos del espacio
+        if espacio:
+            espacio.capacidad = int(data.get('capacidad', espacio.capacidad))
+            espacio.tamanio = data.get('tamanio', espacio.tamanio)
+            espacio.contenido = data.get('contenido', espacio.contenido)
+            espacio.estado = data.get('estado', espacio.estado)
+            # Asegúrate que 'tiene_reserva' es el name correcto del checkbox
+            if data.get('tiene_reserva') == 'on':
+                espacio.reserva = float(data.get('reserva_precio', 0.0))
+            else:
+                espacio.reserva = None # O 0.0 si la BD no permite NULL y 0.0 significa sin reserva
 
-            # Guardar cambios en la base de datos
-            db.session.commit()
-            flash("Producto actualizado correctamente", "success")
-            return redirect(url_for('mesasyboxes.obtener_mesasyboxes'))
+        # --- INICIO: Lógica para eliminar multimedia existente ---
+        deleted_media_ids_str = data.get('deleted_media') # El name del input oculto es 'deleted_media'
+        if deleted_media_ids_str:
+            media_ids_to_delete = [int(id_val) for id_val in deleted_media_ids_str.split(',') if id_val.strip()]
+            
+            for media_id in media_ids_to_delete:
+                media_item = ImagenVideo.query.get(media_id) # Asumiendo que Id_imgV es la PK
+                if media_item:
+                    # Eliminar archivo físico si es una imagen local
+                    if media_item.Tipo_Archivo == 'imagen' and \
+                       media_item.Archivo and \
+                       not media_item.Archivo.startswith(('http://', 'https://')):
+                        try:
+                            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], media_item.Archivo)
+                            if os.path.exists(file_path):
+                                os.remove(file_path)
+                                print(f"Archivo físico eliminado: {file_path}")
+                            else:
+                                print(f"Archivo físico no encontrado para eliminar: {file_path}")
+                        except Exception as e_file:
+                            print(f"Error al eliminar archivo físico {media_item.Archivo}: {str(e_file)}")
+                            # Considera usar flash(f"Error al eliminar archivo físico {media_item.Archivo}", "warning")
 
-        except Exception as e:
-            db.session.rollback()
-            flash(f"Error al actualizar: {str(e)}", "error")
-            return redirect(url_for('mesasyboxes.obtener_mesasyboxes'))
+                    db.session.delete(media_item)
+                    print(f"Media con ID {media_id} marcada para eliminación de la BD.")
+        # --- FIN: Lógica para eliminar multimedia existente ---
 
+        # Subir nuevas imágenes (archivo físico)
+        archivos = request.files.getlist('archivos') # name del input file para nuevos archivos
+        for file in archivos:
+            if file and file.filename and allowed_file(file.filename, current_app.config['ALLOWED_EXTENSIONS']):
+                tipo_archivo = 'imagen' if file.content_type.startswith('image') else 'video' # Simplificado
+                filename = secure_filename_wrapper(file.filename)
+                file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                file.save(file_path)
+
+                nueva_media = ImagenVideo(
+                    Id_Discoteca=1, # Ajusta según sea necesario
+                    Tipo_Tabla='espacios',
+                    Id_referenciaTabla=producto.id_producto,
+                    Descripcion=data.get('descripcion_media', ''), # Asegúrate que tienes este campo o ajústalo
+                    Tipo_Archivo=tipo_archivo,
+                    Archivo=filename
+                )
+                db.session.add(nueva_media)
+
+        # Agregar video por URL si existe
+        # Asegúrate que el name en el HTML es 'urls_video' para este campo
+        # y que se procesa correctamente si son múltiples URLs nuevas.
+        # El código actual en el HTML parece manejar un input 'hiddenVideoUrls' que es poblado por JS.
+        # Si es una lista de URLs, necesitarás iterar.
+        
+        nuevas_urls_video_str = data.get('urls_video') # name del input para nuevas URLs de video
+        if nuevas_urls_video_str:
+            urls_list = [url.strip() for url in nuevas_urls_video_str.split(',') if url.strip()]
+            for video_url in urls_list:
+                nueva_media_video_url = ImagenVideo(
+                    Id_Discoteca=1, # Ajusta según sea necesario
+                    Tipo_Tabla='espacios',
+                    Id_referenciaTabla=producto.id_producto,
+                    Descripcion=data.get('descripcion_media_video_url', ''), # Campo de descripción específico si es necesario
+                    Tipo_Archivo='video',
+                    Archivo=video_url
+                )
+                db.session.add(nueva_media_video_url)
+        
+        db.session.commit()
+        flash("Producto actualizado con multimedia", "success")
+        return redirect(url_for('mesasyboxes.obtener_mesasyboxes'))
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error al actualizar producto {id_producto}: {str(e)}")
+        flash(f"Error al actualizar: {str(e)}", "danger")
+        # Es mejor redirigir a la misma página de edición en caso de error para no perder los datos ya ingresados
+        # return redirect(url_for('mesasyboxes.editar_mesasybox', id_producto=id_producto))
+        return redirect(url_for('mesasyboxes.obtener_mesasyboxes')) # O como lo tenías
+    
 
 @mesasyboxes_bp.route('/eliminar/<int:id_producto>', methods=['POST'])
 def eliminar_mesasybox(id_producto):

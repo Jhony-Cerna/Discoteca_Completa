@@ -3,95 +3,310 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% if artista %}Editar{% else %}Agregar{% endif %} Artista</title>
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/artistas.css') }}">
+    <title>Agregar Artista</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        .preview-item img, .preview-item iframe {
+            width: 150px;
+            height: 100px;
+            object-fit: cover;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+        .btn-close.position-absolute {
+            top: 0;
+            right: 0;
+            background: rgba(255,255,255,0.8);
+            padding: 0.25rem 0.5rem; /* Ajuste para mejor apariencia */
+        }
+        .preview-item iframe {
+            border: none; /* Quitar borde por defecto de iframes */
+        }
+    </style>
 </head>
 <body>
-    <div class="container mt-5">
-        <h1 class="mb-4">{% if artista %}Editar{% else %}Agregar{% endif %} Artista</h1>
-        
-        <!-- Mensajes Flash -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show">
-                        {{ message }}
-                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-        
-        <!-- Formulario -->
-        <form method="POST" enctype="multipart/form-data">
-            <input type="hidden" name="next" value="{{ next_url }}">
-            
-            <!-- Campos del formulario -->
-            <div class="form-group">
-                <label for="nombreArtistico">Nombre Artístico *</label>
-                <input type="text" class="form-control" id="nombreArtistico" 
-                    name="nombreArtistico" required 
-                    value="{{ form_data.nombreArtistico if form_data else artista.nombre if artista else '' }}">
-            </div>
-            
-            <div class="form-group">
-                <label for="generoMusical">Género Musical *</label>
-                <select class="form-control" id="generoMusical" name="generoMusical" required>
-                    <option value="">Seleccione un género</option>
-                    {% for genero in ['Cumbia', 'Pop', 'Reggaeton', 'Merengue', 'Salsa', 'Rock', 'Electrónica', 'Bachata'] %}
-                        <option value="{{ genero }}" 
-                            {% if (form_data and form_data.generoMusical == genero) or 
-                                  (artista and artista.genero_musical == genero) %}selected{% endif %}>
-                            {{ genero }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label for="descripcion">Descripción *</label>
-                <textarea class="form-control" id="descripcion" name="descripcion" 
-                        rows="4" required>{{ form_data.descripcion if form_data else artista.descripcion if artista else '' }}</textarea>
-            </div>
+<div class="container mt-5 mb-5">
+    <h1 class="mb-4">Agregar Nuevo Artista</h1>
 
-            <!-- Sección de imagen (opcional) -->
-            <div class="form-group">
-                <label for="imagen">Imagen del Artista (opcional)</label>
-                <div class="custom-file">
-                    <input type="file" class="custom-file-input" id="imagen" name="imagen" disabled>
-                    <label class="custom-file-label" for="imagen">Funcionalidad temporalmente deshabilitada</label>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{category}} alert-dismissible fade show" role="alert">
+                    {{message}}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form id="artistaForm" method="POST" action="{{ url_for('artistas.crear_artista') }}" enctype="multipart/form-data">
+        <input type="hidden" name="urls_video" id="urls_video_hidden">
+        <input type="hidden" name="descripcion_media_archivos" id="descripcion_media_archivos_hidden">
+        <input type="hidden" name="descripcion_media_urls" id="descripcion_media_urls_hidden">
+
+        <div class="mb-3">
+            <label for="nombreArtistico" class="form-label">Nombre Artístico *</label>
+            <input type="text" class="form-control" id="nombreArtistico" name="nombreArtistico" required 
+                   value="{{ form_data.nombreArtistico if form_data else '' }}">
+        </div>
+
+        <div class="mb-3">
+            <label for="generoMusical" class="form-label">Género Musical *</label>
+            <select class="form-select" id="generoMusical" name="generoMusical" required>
+                <option value="">Seleccione un género</option>
+                {% for genero in ['Cumbia','Pop','Reggaeton','Merengue','Salsa','Rock','Electrónica','Bachata','Otro'] %}
+                    <option value="{{genero}}" {{ 'selected' if form_data and form_data.generoMusical == genero }}>
+                        {{genero}}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="descripcion" class="form-label">Descripción *</label>
+            <textarea class="form-control" id="descripcion" name="descripcion" rows="4" required>{{ form_data.descripcion if form_data else '' }}</textarea>
+        </div>
+
+        <div class="mb-4">
+            <label class="form-label">Multimedia</label>
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#mediaModal">
+                <i class="fas fa-plus"></i> Agregar Archivos/URLs
+            </button>
+            
+            <div id="file-preview" class="mt-3 d-flex flex-wrap gap-2"></div>
+            <div id="limite-alerta" class="text-danger small mt-2"></div>
+        </div>
+
+        <div class="d-grid gap-2 d-md-block mb-3">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-save"></i> Guardar Artista
+            </button>
+            <a href="{{ url_for('artistas.artistas') }}" class="btn btn-secondary btn-lg">
+                <i class="fas fa-times"></i> Cancelar
+            </a>
+        </div>
+
+        <div class="modal fade" id="mediaModal" tabindex="-1" aria-labelledby="mediaModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="mediaModalLabel">Gestión de Multimedia</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="descripcion_modal" class="form-label">Descripción (opcional para el ítem actual)</label>
+                            <textarea class="form-control" id="descripcion_modal"></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="tipo_contenido" class="form-label">Tipo de contenido</label>
+                            <select class="form-select" id="tipo_contenido">
+                                <option value="imagen">Imagen</option>
+                                <option value="video">Video (URL)</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3" id="grupo_imagenes">
+                            <label for="input_archivos" class="form-label">Subir imágenes (máx. 4)</label>
+                            <input type="file" class="form-control" 
+                                   id="input_archivos" 
+                                   name="archivos"  accept="image/*" 
+                                   multiple>
+                        </div>
+
+                        <div class="mb-3 d-none" id="grupo_videos">
+                            <label for="input_url" class="form-label">URL de YouTube/Vimeo</label>
+                            <input type="url" class="form-control" 
+                                   id="input_url" 
+                                   placeholder="Ej: https://www.youtube.com/watch?v=...">
+                        </div>
+                    </div>
+                    
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                        <button type="button" class="btn btn-primary" onclick="agregarMultimedia()">Agregar Ítem</button>
+                    </div>
                 </div>
             </div>
+        </div>
+    </form>
+</div>
 
-            <!-- Botones de acción -->
-            <div class="form-group mt-4">
-                <button type="submit" class="btn btn-primary btn-lg">
-                    <i class="fas fa-save"></i> {% if artista %}Actualizar{% else %}Guardar{% endif %} Artista
-                </button>
-                <a href="{{ next_url }}" class="btn btn-secondary btn-lg">
-                    <i class="fas fa-times"></i> Cancelar
-                </a>
-            </div>
-        </form>
-    </div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const MAX_IMAGENES = 4;
+let urlsVideo = []; // Almacena las URLs de video agregadas para evitar duplicados y manejar el campo oculto
+let archivosSeleccionados = new DataTransfer(); // Para manejar los archivos de imagen
 
-    <!-- Scripts requeridos -->
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-    <script src="https://kit.fontawesome.com/your-fontawesome-kit.js" crossorigin="anonymous"></script>
+// Cambiar entre tipos de contenido en el modal
+document.getElementById('tipo_contenido').addEventListener('change', function(e) {
+    document.getElementById('grupo_imagenes').classList.toggle('d-none', e.target.value !== 'imagen');
+    document.getElementById('grupo_videos').classList.toggle('d-none', e.target.value !== 'video');
+});
+
+function agregarMultimedia() {
+    const tipo = document.getElementById('tipo_contenido').value;
+    const descripcion = document.getElementById('descripcion_modal').value.trim();
+    const previewContainer = document.getElementById('file-preview');
+    const alerta = document.getElementById('limite-alerta');
+    const mediaModal = bootstrap.Modal.getInstance(document.getElementById('mediaModal'));
+
+    alerta.textContent = ''; // Limpiar alerta previa
     
-    <!-- Script para manejar nombres de archivo -->
-    <script>
-        // Actualizar nombre de archivo en el input
-        document.querySelector('.custom-file-input').addEventListener('change', function(e) {
-            var fileName = document.getElementById("imagen").files[0].name;
-            var nextSibling = e.target.nextElementSibling;
-            nextSibling.innerText = fileName;
+    if (tipo === 'imagen') {
+        const inputArchivos = document.getElementById('input_archivos');
+        const nuevosArchivos = inputArchivos.files;
+        
+        if (previewContainer.querySelectorAll('.preview-item[data-type="image"]').length + nuevosArchivos.length > MAX_IMAGENES) {
+            alerta.textContent = `Máximo permitido: ${MAX_IMAGENES} imágenes.`;
+            return;
+        }
+
+        Array.from(nuevosArchivos).forEach(archivo => {
+            // Añadir a DataTransfer para el input principal del formulario
+            // Nota: el input 'archivos' dentro del modal se usa para seleccionar,
+            // pero el envío final al backend se basa en su 'name="archivos"' y que esté en el form.
+            // No es necesario manipular DataTransfer si el input está directamente en el form y es el que se usa.
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const div = document.createElement('div');
+                div.className = 'preview-item position-relative';
+                div.dataset.type = 'image'; // Marcar tipo para conteo
+                div.dataset.filename = archivo.name; // Guardar nombre para posible remoción (más complejo)
+                div.innerHTML = `
+                    <img src="${e.target.result}" alt="${archivo.name}">
+                    <button type="button" class="btn-close" aria-label="Remove image" 
+                            onclick="removerImagenPreview(this)"></button>
+                `;
+                previewContainer.appendChild(div);
+            };
+            reader.readAsDataURL(archivo);
         });
-    </script>
+
+        // Guardar la descripción para este lote de archivos (si aplica para todos)
+        // Si necesitas descripciones individuales, la lógica de backend y frontend sería más compleja
+        document.getElementById('descripcion_media_archivos_hidden').value = descripcion; 
+        //inputArchivos.value = ''; // Limpiar el input de archivos del modal para la próxima vez
+
+    } else if (tipo === 'video') {
+        const urlInput = document.getElementById('input_url');
+        const url = urlInput.value.trim();
+        
+        if (!url) {
+            alerta.textContent = 'Ingrese una URL válida.';
+            return;
+        }
+        if (urlsVideo.includes(url)) {
+            alerta.textContent = 'Esta URL de video ya fue agregada.';
+            return;
+        }
+
+        const iframeHTML = formatearURL(url);
+        if (!iframeHTML) {
+             alerta.textContent = 'URL de video no reconocida o no soportada para preview.';
+             return;
+        }
+
+        const div = document.createElement('div');
+        div.className = 'preview-item position-relative';
+        div.dataset.type = 'video';
+        div.innerHTML = `
+            ${iframeHTML}
+            <button type="button" class="btn-close" aria-label="Remove video"
+                    onclick="removerVideo('${url}', this.parentElement)"></button>
+        `;
+        previewContainer.appendChild(div);
+
+        urlsVideo.push(url);
+        document.getElementById('urls_video_hidden').value = urlsVideo.join(',');
+        document.getElementById('descripcion_media_urls_hidden').value = descripcion; // Similar a imágenes, una desc para todos los videos o la última.
+        urlInput.value = ''; // Limpiar input de URL
+    }
+
+    if (!alerta.textContent) { // Si no hubo errores de validación
+        mediaModal.hide();
+        document.getElementById('descripcion_modal').value = ''; // Limpiar descripción del modal
+    }
+}
+
+function formatearURL(url) {
+    let videoId;
+    let embedUrl = null;
+
+    // YouTube:
+    // - https://www.youtube.com/watch?v=VIDEO_ID
+    // - https://youtu.be/VIDEO_ID
+    // - https://m.youtube.com/watch?v=VIDEO_ID
+    const youtubePatterns = [
+        /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+        /(?:https?:\/\/)?(?:m\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/
+    ];
+    for (const pattern of youtubePatterns) {
+        const match = url.match(pattern);
+        if (match && match[1]) {
+            videoId = match[1];
+            embedUrl = `https://www.youtube.com/embed/${videoId}`;
+            break;
+        }
+    }
+
+    // Vimeo:
+    // - https://vimeo.com/VIDEO_ID
+    // - https://player.vimeo.com/video/VIDEO_ID
+    if (!embedUrl) {
+        const vimeoPattern = /(?:https?:\/\/)?(?:www\.)?vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/([^\/]*)\/videos\/|)(\d+)/;
+        const match = url.match(vimeoPattern);
+        if (match && match[2]) {
+            videoId = match[2];
+            embedUrl = `https://player.vimeo.com/video/${videoId}`;
+        }
+    }
+
+    if (embedUrl) {
+        return `<iframe src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+    }
+    
+    // Si no es una URL reconocida para iframe, podrías retornar un mensaje o nada.
+    // Devolver la URL cruda podría no ser seguro si se inyecta directamente como HTML sin sanitizar.
+    // Por seguridad, para URLs no reconocidas, es mejor no generar un iframe.
+    console.warn("URL no compatible para previsualización de iframe:", url);
+    return null; // O un mensaje como '<p>Previsualización no disponible.</p>'
+}
+
+function removerImagenPreview(buttonElement) {
+    // Esta función es más compleja si necesitas sincronizar con el input 'archivos'
+    // Por ahora, solo remueve la preview. La gestión de archivos para el backend
+    // depende de que el input 'name="archivos"' esté en el form.
+    // Si se quisiera remover del input 'archivos' antes del submit, se necesitaría
+    // una gestión más avanzada (ej. con DataTransfer y reconstruyendo la FileList).
+    // Para simplicidad, el backend recibirá todos los archivos que estaban en el input
+    // al momento de hacer submit si el usuario los seleccionó.
+    // Esta función solo quita el preview visual.
+    buttonElement.parentElement.remove();
+    // Actualizar el contador de MAX_IMAGENES si es necesario
+}
+
+function removerVideo(urlToRemove, previewElement) {
+    urlsVideo = urlsVideo.filter(url => url !== urlToRemove);
+    document.getElementById('urls_video_hidden').value = urlsVideo.join(',');
+    previewElement.remove();
+    if (urlsVideo.length === 0) {
+        document.getElementById('descripcion_media_urls_hidden').value = ''; // Limpiar si no hay videos
+    }
+}
+
+// Opcional: Limpiar campos del modal cuando se cierra si no se agregó nada.
+const mediaModalElement = document.getElementById('mediaModal');
+mediaModalElement.addEventListener('hidden.bs.modal', function () {
+    document.getElementById('descripcion_modal').value = '';
+    //document.getElementById('input_archivos').value = ''; // Limpiar selector de archivos
+    document.getElementById('input_url').value = ''; // Limpiar input de URL
+    document.getElementById('limite-alerta').textContent = ''; // Limpiar alertas
+});
+
+</script>
 </body>
 </html>

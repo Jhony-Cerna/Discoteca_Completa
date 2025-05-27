@@ -5,7 +5,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Editar Producto</title>
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        .preview-item img,
+        .preview-item video,
+        .preview-item iframe {
+            max-width: 150px;
+            max-height: 100px;
+            object-fit: cover;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .position-relative {
+            position: relative;
+        }
+
+        .btn-close.position-absolute {
+            top: 0;
+            right: 0;
+            background-color: rgba(255, 255, 255, 0.8); /* Aumentado opacidad para mejor visibilidad */
+            border-radius: 50%;
+            padding: 0.25rem 0.5rem;
+            z-index: 10; /* Asegurar que esté encima de la imagen/video */
+        }
+    </style>
 </head>
 
 <body>
@@ -15,47 +41,319 @@
     </nav>
     <div class="container mt-5">
         <h1 class="mb-4">Editar Producto</h1>
-        <form method="POST" action="{{ url_for('productos.update_producto', id=producto[0]) }}">
-            <div class="form-group">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        {% if producto %}
+        <form method="POST" action="{{ url_for('productos.update_producto', id=producto.id_producto) }}"
+            enctype="multipart/form-data" id="editProductForm">
+            <div class="form-group mb-3">
                 <label for="tipo">Tipo</label>
-                <input type="text" class="form-control" id="tipo" name="tipo" value="{{ producto[1] }}" required>
+                <input type="text" class="form-control" id="tipo" name="tipo" value="{{ producto.tipo }}" required>
             </div>
-            <div class="form-group">
+            <div class="form-group mb-3">
                 <label for="nombre">Nombre</label>
-                <input type="text" class="form-control" id="nombre" name="nombre" value="{{ producto[2] }}" required>
+                <input type="text" class="form-control" id="nombre" name="nombre" value="{{ producto.nombre }}"
+                    required>
             </div>
-            <div class="form-group">
+            <div class="form-group mb-3">
                 <label for="descripcion">Descripción</label>
-                <textarea class="form-control" id="descripcion" name="descripcion" required>{{ producto[3] }}</textarea>
+                <textarea class="form-control" id="descripcion" name="descripcion"
+                    required>{{ producto.descripcion }}</textarea>
             </div>
-            <div class="form-group">
+            <div class="form-group mb-3">
                 <label for="precio_regular">Precio Regular</label>
                 <input type="number" class="form-control" id="precio_regular" name="precio_regular"
-                    value="{{ producto[4] }}" required>
+                    value="{{ producto.precio_regular }}" step="0.01" required>
             </div>
-            <div class="form-group form-check">
+            <div class="form-group form-check mb-3">
                 <input type="checkbox" class="form-check-input" id="promocion" name="promocion" value="1"
-                    style="transform: scale(1.5);" {% if producto[5]==1 %}checked{% endif %}>
+                    style="transform: scale(1.5);" {% if producto.promocion==1 %}checked{% endif %}>
                 <label class="form-check-label" for="promocion">Promoción</label>
             </div>
-            <div class="form-group">
-                <label for="tamanio">Tamaño</label>
-                <input type="text" class="form-control" id="tamanio" name="tamanio" value="{{ producto[6] }}">
-            </div>
-            <div class="form-group">
-                <label for="insumos">Insumos</label>
-                <input type="text" class="form-control" id="insumos" name="insumos" value="{{ producto[7] }}">
-            </div>
-            <div class="form-group">
-                <label for="stock">Stock</label>
-                <input type="number" class="form-control" id="stock" name="stock" value="{{ producto[8] }}">
-            </div>
-            <button type="submit" class="btn btn-primary">Guardar Cambios</button>
-        </form>
-    </div>
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-</body>
 
+            {% if producto.tipo in ['piqueo', 'coctel'] %}
+            <div class="form-group mb-3">
+                <label for="tamanio">Tamaño</label>
+                <input type="text" class="form-control" id="tamanio" name="tamanio"
+                    value="{{ detalle.tamanio if detalle and detalle.tamanio is not none else '' }}">
+            </div>
+            <div class="form-group mb-3">
+                <label for="insumos">Insumos</label>
+                <input type="text" class="form-control" id="insumos" name="insumos"
+                    value="{{ detalle.insumos if detalle and detalle.insumos is not none else '' }}">
+            </div>
+            <div class="form-group mb-3">
+                <label for="stock">Stock</label>
+                <input type="number" class="form-control" id="stock" name="stock"
+                    value="{{ detalle.stock if detalle and detalle.stock is not none else '' }}">
+            </div>
+            {% endif %}
+
+            <input type="hidden" name="urls_video" id="consolidated_video_urls_input">
+            <input type="hidden" name="deleted_media_ids" id="deleted_media_ids_input" value="">
+            <input type="file" name="archivos" id="mainArchivosInput" multiple style="display: none;">
+
+
+            <div class="form-group mt-3 mb-3">
+                <label class="form-label">Multimedia Existente:</label>
+                <div id="existing-media-preview" class="mt-2 d-flex flex-wrap">
+                    {% if archivos_multimedia %}
+                    {% for media in archivos_multimedia %}
+                    <div class="preview-item position-relative d-inline-block m-1" id="existing-media-{{ media.Id_imgV }}">
+                        {% if media.Tipo_Archivo == 'imagen' %}
+                        <img src="{{ url_for('static', filename='uploads/' + media.Archivo) }}"
+                            alt="{{ media.Descripcion }}">
+                        {% elif media.Tipo_Archivo == 'video_local' %}
+                        <video src="{{ url_for('static', filename='uploads/' + media.Archivo) }}" controls></video>
+                        {% elif media.Tipo_Archivo == 'video' %}
+                        <iframe src="{{ format_video_url_for_preview(media.Archivo) }}" frameborder="0"
+                            allowfullscreen></iframe>
+                        {% endif %}
+                        <button type="button" class="btn-close position-absolute" aria-label="Close"
+                            onclick="markMediaForDeletion({{ media.Id_imgV }}, this)"></button>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p>No hay multimedia existente para este producto.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-group mt-3 mb-3">
+                <label class="form-label">Agregar Nueva Multimedia:</label>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="modal"
+                    data-bs-target="#mediaModal">
+                    <i class="fas fa-plus"></i> Agregar Archivos/URLs
+                </button>
+                <div id="new-file-preview" class="mt-2 d-flex flex-wrap"></div>
+                <div id="limite-alerta" class="text-danger mt-1 small"></div>
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-3">Guardar Cambios</button>
+            <a href="{{ url_for('productos.index') }}" class="btn btn-secondary mt-3">Cancelar</a>
+        </form>
+        {% else %}
+        <div class="alert alert-danger">Producto no encontrado.</div>
+        <a href="{{ url_for('productos.index') }}" class="btn btn-primary">Volver al Listado</a>
+        {% endif %}
+    </div>
+
+    <div class="modal fade" id="mediaModal" tabindex="-1" aria-labelledby="mediaModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="mediaModalLabel">Subir Multimedia</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="descripcion_media_modal" class="form-label">Descripción (opcional)</label>
+                        <textarea class="form-control" id="descripcion_media_modal"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="tipo_archivo_modal" class="form-label">Tipo de Archivo</label>
+                        <select class="form-select" id="tipo_archivo_modal">
+                            <option value="imagen" selected>Imagen</option>
+                            <option value="video_local">Video (Archivo)</option>
+                            <option value="video_url">Video (URL YouTube/Vimeo)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="fileInputGroupModal">
+                        <label for="fileInputModal" class="form-label">Archivo (para imágenes o videos locales, máx. 4 en total)</label>
+                        <input class="form-control" type="file" id="fileInputModal" accept="image/*,video/*" multiple>
+                    </div>
+                    <div class="mb-3" id="urlInputGroupModal" style="display: none;">
+                        <label for="videoUrlEntryModal" class="form-label">URL del Video</label>
+                        <input class="form-control" type="url" id="videoUrlEntryModal" placeholder="https://youtube.com/watch?v=...">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="button" class="btn btn-primary" onclick="addFilesFromModal()">Agregar al Formulario</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Contenedores para nuevos archivos y URLs
+        let newFilesDataTransfer = new DataTransfer();
+        let newVideoUrls = [];
+        let deletedMediaIds = []; // IDs de multimedia existente a eliminar
+
+        const MAX_TOTAL_FILES = 4; // Límite total de archivos nuevos (imágenes + videos locales)
+
+        document.getElementById('tipo_archivo_modal').addEventListener('change', function () {
+            const fileGroup = document.getElementById('fileInputGroupModal');
+            const urlGroup = document.getElementById('urlInputGroupModal');
+            if (this.value === 'video_url') {
+                fileGroup.style.display = 'none';
+                urlGroup.style.display = 'block';
+            } else {
+                fileGroup.style.display = 'block';
+                urlGroup.style.display = 'none';
+            }
+        });
+
+        function markMediaForDeletion(mediaId, buttonElement) {
+            const previewItem = document.getElementById(`existing-media-${mediaId}`);
+            if (previewItem) {
+                previewItem.style.opacity = '0.5'; // Atenuar visualmente
+                previewItem.style.pointerEvents = 'none'; // Deshabilitar más clics
+                buttonElement.style.display = 'none'; // Ocultar el botón de cerrar
+            }
+            if (!deletedMediaIds.includes(mediaId)) {
+                deletedMediaIds.push(mediaId);
+            }
+            console.log('IDs de multimedia a eliminar:', deletedMediaIds);
+            document.getElementById('deleted_media_ids_input').value = deletedMediaIds.join(',');
+        }
+
+        function addFilesFromModal() {
+            const tipo = document.getElementById('tipo_archivo_modal').value;
+            const descripcion = document.getElementById('descripcion_media_modal').value;
+            const previewContainer = document.getElementById('new-file-preview');
+            const limiteAlerta = document.getElementById('limite-alerta');
+            limiteAlerta.textContent = '';
+
+
+            if (tipo === 'imagen' || tipo === 'video_local') {
+                const fileInputModal = document.getElementById('fileInputModal');
+                const filesFromInput = fileInputModal.files;
+
+                if (newFilesDataTransfer.files.length + filesFromInput.length > MAX_TOTAL_FILES) {
+                    limiteAlerta.textContent = `Solo puedes agregar un máximo de ${MAX_TOTAL_FILES} archivos (imágenes/videos locales) en total.`;
+                    fileInputModal.value = ""; // Limpiar para evitar re-procesar los mismos
+                    return;
+                }
+
+                for (let i = 0; i < filesFromInput.length; i++) {
+                    const file = filesFromInput[i];
+                    // Evitar duplicados basados en nombre, tamaño y tipo (simple check)
+                    let exists = false;
+                    for (let j = 0; j < newFilesDataTransfer.files.length; j++) {
+                        if (newFilesDataTransfer.files[j].name === file.name && newFilesDataTransfer.files[j].size === file.size && newFilesDataTransfer.files[j].type === file.type) {
+                            exists = true;
+                            break;
+                        }
+                    }
+                    if (exists) continue;
+
+                    newFilesDataTransfer.items.add(file);
+
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        const itemDiv = document.createElement('div');
+                        itemDiv.className = 'preview-item position-relative d-inline-block m-1';
+                        itemDiv.dataset.fileName = file.name; // Para identificar al remover
+                        itemDiv.dataset.fileSize = file.size;
+                        itemDiv.dataset.fileType = file.type;
+
+
+                        let mediaElement;
+                        if (file.type.startsWith('image/')) {
+                            mediaElement = `<img src="${e.target.result}" alt="${descripcion || file.name}">`;
+                        } else if (file.type.startsWith('video/')) {
+                            mediaElement = `<video src="${e.target.result}" controls></video>`;
+                        } else {
+                            mediaElement = `<p>Archivo no soportado</p>`; // Fallback
+                        }
+                        
+                        itemDiv.innerHTML = `
+                            ${mediaElement}
+                            <button type="button" class="btn-close position-absolute" aria-label="Close" 
+                                    onclick="removeNewPreviewItem(this, '${file.name}', ${file.size}, '${file.type}')"></button>
+                        `;
+                        previewContainer.appendChild(itemDiv);
+                    };
+                    reader.readAsDataURL(file);
+                }
+                fileInputModal.value = ""; // Limpiar input del modal
+            } else if (tipo === 'video_url') {
+                const videoUrl = document.getElementById('videoUrlEntryModal').value.trim();
+                if (videoUrl) {
+                     // Evitar duplicados de URLs
+                    if (newVideoUrls.includes(videoUrl)) {
+                        limiteAlerta.textContent = 'Esta URL de video ya ha sido agregada.';
+                        return;
+                    }
+                    if (newVideoUrls.length >= MAX_TOTAL_FILES ) { // O algún otro límite para URLs
+                         limiteAlerta.textContent = `Solo puedes agregar un máximo de ${MAX_TOTAL_FILES} URLs de video.`;
+                         return;
+                    }
+
+                    newVideoUrls.push(videoUrl);
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'preview-item position-relative d-inline-block m-1';
+                    itemDiv.dataset.videoUrl = videoUrl; // Para identificar al remover
+
+                    // Intenta generar un preview simple (esto es básico, podrías necesitar APIs para thumbnails reales)
+                    let previewHtml = `<iframe src="${videoUrl.replace('watch?v=', 'embed/')}" frameborder="0" allowfullscreen></iframe>`;
+                    if (!videoUrl.includes('youtube.com') && !videoUrl.includes('vimeo.com')) { // Simplificación
+                        previewHtml = `<p><a href="${videoUrl}" target="_blank">${videoUrl}</a></p>`;
+                    }
+                    
+                    itemDiv.innerHTML = `
+                        ${previewHtml}
+                        <button type="button" class="btn-close position-absolute" aria-label="Close" 
+                                onclick="removeNewVideoUrl(this, '${videoUrl}')"></button>
+                    `;
+                    previewContainer.appendChild(itemDiv);
+                    document.getElementById('videoUrlEntryModal').value = ""; // Limpiar input del modal
+                } else {
+                    limiteAlerta.textContent = 'Por favor, ingresa una URL de video válida.';
+                }
+            }
+            bootstrap.Modal.getInstance(document.getElementById('mediaModal')).hide();
+        }
+
+        function removeNewPreviewItem(buttonElement, fileName, fileSize, fileType) {
+            const newDt = new DataTransfer();
+            for (let i = 0; i < newFilesDataTransfer.files.length; i++) {
+                const f = newFilesDataTransfer.files[i];
+                if (!(f.name === fileName && f.size === fileSize && f.type === fileType )) {
+                    newDt.items.add(f);
+                }
+            }
+            newFilesDataTransfer = newDt;
+            buttonElement.parentElement.remove();
+        }
+        
+        function removeNewVideoUrl(buttonElement, videoUrl) {
+            newVideoUrls = newVideoUrls.filter(url => url !== videoUrl);
+            buttonElement.parentElement.remove();
+        }
+
+
+        document.getElementById('editProductForm').addEventListener('submit', function (e) {
+            const precioInput = document.getElementById('precio_regular');
+            if (precioInput && parseFloat(precioInput.value) <= 0) {
+                alert('El precio debe ser mayor a 0.');
+                e.preventDefault();
+                return;
+            }
+
+            // Asignar archivos y URLs a los inputs ocultos del formulario principal
+            if (document.getElementById('mainArchivosInput')) {
+                 document.getElementById('mainArchivosInput').files = newFilesDataTransfer.files;
+            }
+            if (document.getElementById('consolidated_video_urls_input')) {
+                 document.getElementById('consolidated_video_urls_input').value = newVideoUrls.join(',');
+            }
+            if (document.getElementById('deleted_media_ids_input')) {
+                 document.getElementById('deleted_media_ids_input').value = deletedMediaIds.join(',');
+            }
+        });
+    </script>
+</body>
 </html>

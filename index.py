@@ -1,6 +1,8 @@
+import logging
 import os
 from flask import Flask
 from src.database.db_mysql import init_db
+
 from src.routes import main  # Asegúrate de que esto esté importado correctamente
 from src.routes.mesasyboxes import mesasyboxes_bp  # Importa el nuevo blueprint
 from src.routes.eventos import eventos_bp
@@ -16,7 +18,6 @@ from src.models.red_social import RedSocial, DetalleRedSocial
 
 from src.routes.redes_sociales import redes_bp
 
-from src.routes.promociones import promociones_bp
 
 from src.routes.bebidas import bebidas_bp  # Nueva importación
 
@@ -34,13 +35,42 @@ from src.routes.discotecas import discotecas_bp
 
 from src.routes.servicios import servicios_bp
 
+from src.routes.promociones_routes import promociones_bp
 
+# Configuración del logger
+logging.basicConfig(level=logging.INFO) # O podrías usar logging.DEBUG para ver incluso más detalles
+        # Asegúrate de que el logger de la app también esté en el nivel deseado
+
+
+from flask import Flask
+from flask_wtf.csrf import CSRFProtect
 
 
 from config import Config
 
 app = Flask(__name__, template_folder='src/templates', static_folder='src/static')
 app.config.from_object(Config)
+
+
+# Configuración explícita del nivel del logger de la app
+if app.debug:
+    app.logger.setLevel(logging.DEBUG)  # Mensajes DEBUG, INFO, WARNING, ERROR, CRITICAL
+    logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO) # Opcional: para ver logs de SQLAlchemy
+else:
+    app.logger.setLevel(logging.INFO)
+
+
+
+# Filtro para videos
+@app.template_filter('format_video_url')
+def format_video_url(url):
+    if 'youtube.com/watch?v=' in url:
+        return url.replace('watch?v=', 'embed/')
+    elif 'youtu.be/' in url:
+        return url.replace('youtu.be/', 'youtube.com/embed/')
+    elif 'vimeo.com/' in url:
+        return url.replace('vimeo.com/', 'player.vimeo.com/video/')
+    return url
 
 #Imagenes
 app.config['UPLOAD_FOLDER'] = 'src/static/uploads'
@@ -56,7 +86,6 @@ app.register_blueprint(artistas_bp)
 
 app.register_blueprint(redes_bp)
 
-app.register_blueprint(promociones_bp)
 
 app.register_blueprint(bebidas_bp)  # Nuevo registro
 
@@ -73,6 +102,8 @@ app.register_blueprint(categorias_bp, url_prefix='/categorias')
 app.register_blueprint(discotecas_bp, url_prefix='/discotecas')
 
 app.register_blueprint(servicios_bp, url_prefix='/servicios')
+
+app.register_blueprint(promociones_bp, url_prefix='/promociones')
 
 # Imprime las rutas registradas
 for rule in app.url_map.iter_rules():

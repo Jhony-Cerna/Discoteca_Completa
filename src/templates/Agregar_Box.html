@@ -101,13 +101,14 @@
 
             <div class="form-group">
                 <label for="estado">Estado:</label>
-                <select id="estado" name="estado" required>
+                <!-- Select deshabilitado solo para visualización -->
+                <select id="estado" name="estado_visible" disabled>
                     <option value="disponible" {% if espacio and espacio[4] == 'disponible' %}selected{% endif %}>Disponible</option>
-                    <option value="pagado" {% if espacio and espacio[4] == 'pagado' %}selected{% endif %}>Pagado</option>
-                    <option value="separado" {% if espacio and espacio[4] == 'separado' %}selected{% endif %}>Separado</option>
-                    <option value="no disponible" {% if espacio and espacio[4] == 'no disponible' %}selected{% endif %}>No Disponible</option>
                 </select>
+                <!-- Campo oculto que se envía al servidor -->
+                <input type="hidden" name="estado" value="disponible">
             </div>
+
 
             <!--Aqui va lo de imagenes y videos-->
             <div class="form-group">
@@ -118,6 +119,7 @@
                 
                 <!-- Preview de archivos seleccionados -->
                 <div id="file-preview" class="mt-2"></div>
+                <div id="limite-alerta" class="text-danger mt-2"></div> <!--AGREGUE ESTO NUEVO PARA CONTEO-->
             </div>
 
             <!-- Modal para subir archivos -->
@@ -140,11 +142,17 @@
                                     <option value="video">Video</option>
                                 </select>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Archivos</label>
-                                <input class="form-control" type="file" name="archivos" multiple 
-                                        accept="image/*, video/*" id="fileInput">
+                            <!-- DIV PARA IMAGENES-->
+                            <div class="mb-3" id="fileInputGroup">
+                                <label class="form-label">Archivo (solo para imágenes)</label>
+                                <input class="form-control" type="file" name="archivos" accept="image/*" id="fileInput">
                             </div>
+                            <!-- DIV PARA VIDEOS-->
+                            <div class="mb-3" id="urlInputGroup" style="display: none;">
+                                <label class="form-label">URL del Video</label>
+                                <input class="form-control" type="url" name="url_video" id="urlInput">
+                            </div>
+                            
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
@@ -166,24 +174,74 @@
         <!-- Script para manejar archivos -->
         <script>
             function addFiles() {
-                const input = document.getElementById('fileInput');
+                const tipo = document.querySelector('select[name="tipo_archivo"]').value;
+                const descripcion = document.querySelector('textarea[name="descripcion_media"]').value;
                 const preview = document.getElementById('file-preview');
-                
-                Array.from(input.files).forEach(file => {
-                    const badge = document.createElement('span');
-                    badge.className = 'badge bg-primary me-1';
-                    badge.innerHTML = `
-                        ${file.name} 
-                        <span class="ms-2" onclick="this.parentElement.remove()" style="cursor:pointer">
-                            <i class="fas fa-times"></i>
-                        </span>
-                    `;
-                    preview.appendChild(badge);
-                });
-                
-                $('#mediaModal').modal('hide');
+        
+                if (tipo === 'imagen') {
+                    const imagenesActuales = document.querySelectorAll('#file-preview img');
+                    if (imagenesActuales.length >= 4) {
+                        alert("Solo puedes agregar un máximo de 4 imágenes.");
+                        return;
+                    }
+        
+                    const fileInput = document.getElementById('fileInput');
+                    if (fileInput.files.length > 0) {
+                        const file = fileInput.files[0];
+                        const reader = new FileReader();
+                        reader.onload = function (e) {
+                            const container = document.createElement('div');
+                            container.className = 'preview-item position-relative d-inline-block m-2';
+                            container.innerHTML = `
+                                <img src="${e.target.result}" alt="Imagen previa" style="width: 150px; height: 150px; object-fit: cover; border: 1px solid #ccc; border-radius: 8px;">
+                                <button type="button" class="btn-close position-absolute top-0 end-0" onclick="this.parentElement.remove()"></button>
+                            `;
+                            preview.appendChild(container);
+
+                            document.getElementById('limite-alerta').textContent = `Has cargado ${imagenesActuales.length + 1} de 4 imágenes.`;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+        
+                } else if (tipo === 'video') {
+                    const urlInput = document.getElementById('urlInput').value;
+                    if (urlInput) {
+                        const container = document.createElement('div');
+                        container.className = 'preview-item position-relative d-inline-block m-2';
+                        container.innerHTML = `
+                            <iframe src="${formatVideoURL(urlInput)}" frameborder="0" allowfullscreen style="width: 250px; height: 150px; border-radius: 8px;"></iframe>
+                            <button type="button" class="btn-close position-absolute top-0 end-0" onclick="this.parentElement.remove()"></button>
+                        `;
+                        preview.appendChild(container);
+                    }
+                }
+        
+                const modal = bootstrap.Modal.getInstance(document.getElementById('mediaModal'));
+                modal.hide();
             }
+        
+            function formatVideoURL(url) {
+                if (url.includes('youtube.com/watch?v=')) {
+                    const videoId = url.split('v=')[1].split('&')[0];
+                    return `https://www.youtube.com/embed/${videoId}`;
+                } else if (url.includes('youtu.be/')) {
+                    const videoId = url.split('.be/')[1];
+                    return `https://www.youtube.com/embed/${videoId}`;
+                } else if (url.includes('vimeo.com/')) {
+                    const videoId = url.split('.com/')[1];
+                    return `https://player.vimeo.com/video/${videoId}`;
+                }
+                return url;
+            }
+        
+            document.querySelector('select[name="tipo_archivo"]').addEventListener('change', function () {
+                const tipo = this.value;
+                document.getElementById('fileInputGroup').style.display = tipo === 'imagen' ? 'block' : 'none';
+                document.getElementById('urlInputGroup').style.display = tipo === 'video' ? 'block' : 'none';
+            });
         </script>
-    
+        
+        
+
 </body>
 </html>

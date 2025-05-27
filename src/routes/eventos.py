@@ -1,87 +1,180 @@
 # src/routes/eventos.py
 import datetime
-import json
-from flask import Blueprint, json, render_template, request, flash, redirect, url_for, jsonify
-from datetime import datetime, date,time  # Agregar importación correcta
+import json # Para json.loads y json.JSONDecodeError
+import os # Para manejo de archivos
+from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify, current_app
+from datetime import datetime, date, time # Asegúrate que datetime.datetime sea usado o solo datetime
 from src.database.db_mysql import db
-from src.models.evento import Evento, artistas_evento
+from src.models.evento import Evento # artistas_evento no se usa directamente aquí, sino a través de la relación
 from src.models.artistas import Artista
-from src.utils.security import is_safe_url
-from urllib.parse import urlencode
-from src.models.red_social import RedSocial, DetalleRedSocial
+# Asegúrate que estos modelos y utilidades existan y estén en la ruta correcta
+from src.models.media import ImagenVideo # Modelo para imágenes/videos
+from src.utils.file_handling import allowed_file, secure_filename_wrapper 
+# from src.utils.security import is_safe_url # No se usa en este fragmento
+# from urllib.parse import urlencode # No se usa en este fragmento
+# from src.models.red_social import RedSocial, DetalleRedSocial # No se usan en este fragmento
 
-eventos_bp = Blueprint('eventos', __name__)
+eventos_bp = Blueprint('eventos', __name__, url_prefix='/eventos') # Añadido url_prefix para consistencia
 
-@eventos_bp.route('/eventos')
+@eventos_bp.route('/') # Ruta para listar eventos, ej: /eventos/
 def eventos_tabla():
-    eventos = Evento.query.all()  # Usando SQLAlchemy
+    try:
+        eventos = Evento.query.all()
+        # Aquí también podrías querer cargar la media asociada a cada evento para mostrarla en la tabla
+        # Por ejemplo, un thumbnail por evento.
+    except Exception as e:
+        current_app.logger.error(f"Error al listar eventos: {str(e)}")
+        flash('Error al cargar la lista de eventos.', 'danger')
+        eventos = []
     return render_template('Eventos_Tabla.html', eventos=eventos)
 
-
-
-
-#Nuevas Rutas:
-
-@eventos_bp.route('/agregar_evento', methods=['GET', 'POST'])
+@eventos_bp.route('/agregar', methods=['GET', 'POST']) # Cambiado a /agregar para consistencia con url_for
 def agregar_evento():
     if request.method == 'POST':
         try:
-            # Validación de campos básicos
-            required_fields = ['nombre', 'descripcion', 'direccion', 'fecha', 'hora', 'artistas']
-            if not all(field in request.form and request.form[field].strip() for field in required_fields):
-                flash('Todos los campos son requeridos', 'danger')
-                return redirect(url_for('eventos.agregar_evento'))
+            # Validación de campos básicos (nombre, descripcion, direccion, fecha, hora)
+            # El campo 'artistas' se valida después de procesar JSON
+            required_fields_text = ['nombre', 'descripcion', 'direccion', 'fecha', 'hora']
+            if not all(field in request.form and request.form[field].strip() for field in required_fields_text):
+                flash('Todos los campos de texto del evento son requeridos (nombre, descripción, etc.).', 'danger')
+                # Es mejor renderizar de nuevo el template con los datos ya ingresados que solo redirigir
+                # return redirect(url_for('eventos.agregar_evento')) 
+                # Para renderizar de nuevo, necesitarías cargar los artistas de nuevo
+                artistas_list = Artista.query.order_by(Artista.nombre).all()
+                return render_template('Agregar_evento.html', artistas=artistas_list, 
+                                       min_date=datetime.now().strftime('%Y-%m-%d'),
+                                       form_data=request.form)
+
 
             # Procesar artistas seleccionados
-            artistas_data = request.form['artistas']
-            artistas_ids = json.loads(artistas_data) if artistas_data else []
+            artistas_data = request.form.get('artistas') # Usar .get() para evitar KeyError si no está
+            if not artistas_data:
+                flash('Debe seleccionar al menos un artista.', 'warning')
+                artistas_list = Artista.query.order_by(Artista.nombre).all()
+                return render_template('Agregar_evento.html', artistas=artistas_list, 
+                                       min_date=datetime.now().strftime('%Y-%m-%d'),
+                                       form_data=request.form)
+            
+            artistas_ids = json.loads(artistas_data)
 
             if not isinstance(artistas_ids, list) or len(artistas_ids) == 0:
-                flash('Debe seleccionar al menos un artista', 'warning')
-                return redirect(url_for('eventos.agregar_evento'))
+                flash('Debe seleccionar al menos un artista (lista vacía o formato incorrecto).', 'warning')
+                artistas_list = Artista.query.order_by(Artista.nombre).all()
+                return render_template('Agregar_evento.html', artistas=artistas_list, 
+                                       min_date=datetime.now().strftime('%Y-%m-%d'),
+                                       form_data=request.form)
 
             # Convertir fecha y hora
-            fecha = datetime.strptime(request.form['fecha'], '%Y-%m-%d').date()
-            hora = datetime.strptime(request.form['hora'], '%H:%M').time()
+            # Usar datetime.strptime directamente ya que datetime fue importado así.
+            fecha_evento = datetime.strptime(request.form['fecha'], '%Y-%m-%d').date()
+            hora_evento = datetime.strptime(request.form['hora'], '%H:%M').time()
 
             # Crear el evento
             nuevo_evento = Evento(
-                nombre_evento=request.form['nombre'],
-                descripcion=request.form['descripcion'],
-                lugar=request.form['direccion'],
-                fecha=fecha,
-                hora=hora,
-                id_discoteca=1
+                nombre_evento=request.form['nombre'].strip(),
+                descripcion=request.form['descripcion'].strip(),
+                lugar=request.form['direccion'].strip(),
+                fecha=fecha_evento,
+                hora=hora_evento,
+                id_discoteca=1 # Placeholder, ajustar según tu lógica (igual que en bebidas)
             )
 
             # Asociar artistas al evento
-            artistas = Artista.query.filter(Artista.id_artista.in_(artistas_ids)).all()
-            nuevo_evento.artistas = artistas
+            artistas_obj = Artista.query.filter(Artista.id_artista.in_(artistas_ids)).all()
+            if len(artistas_obj) != len(artistas_ids):
+                 flash('Alguno de los artistas seleccionados no fue encontrado.', 'warning')
+                 # Continuar o detener? Por ahora continuamos.
+            nuevo_evento.artistas = artistas_obj
 
-            # Guardar en la base de datos
             db.session.add(nuevo_evento)
-            db.session.commit()
+            db.session.flush()  # Obtener ID del evento para asociar la multimedia
 
-            flash('Evento creado exitosamente', 'success')
+            # --- INICIO: Manejo de Multimedia ---
+            # Asegúrate que estas configuraciones existen en tu app Flask
+            # ej. app.config['UPLOAD_FOLDER'] = 'static/uploads/eventos'
+            # ej. app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif', 'mp4', 'mov'}
+            
+            # 1. Archivos subidos (imágenes para eventos)
+            archivos_subidos = request.files.getlist('archivos')
+            descripciones_archivos = request.form.getlist('descripciones_archivos') # Lista de descripciones para archivos
+
+            for i, file_storage in enumerate(archivos_subidos):
+                if file_storage and file_storage.filename:
+                    # Define extensiones permitidas para imágenes de eventos
+                    allowed_img_extensions = current_app.config.get('ALLOWED_IMAGE_EXTENSIONS', {'png', 'jpg', 'jpeg', 'gif'})
+                    if allowed_file(file_storage.filename, allowed_img_extensions):
+                        filename = secure_filename_wrapper(file_storage.filename)
+                        # Considera un subdirectorio para eventos si UPLOAD_FOLDER es genérico
+                        upload_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                        
+                        # Crear directorio si no existe
+                        os.makedirs(os.path.dirname(upload_path), exist_ok=True)
+                        
+                        file_storage.save(upload_path)
+
+                        descripcion = descripciones_archivos[i] if i < len(descripciones_archivos) else request.form.get('descripcion_media', '') # Fallback a una general si falta
+
+                        media_archivo = ImagenVideo(
+                            Id_Discoteca=nuevo_evento.id_discoteca, # Usar el de nuevo_evento
+                            Tipo_Tabla='eventos',
+                            Id_referenciaTabla=nuevo_evento.id_evento,
+                            Descripcion=descripcion,
+                            Tipo_Archivo='imagen', # Asumimos que 'archivos' son imágenes
+                            Archivo=filename # Guardar solo el nombre o ruta relativa desde UPLOAD_FOLDER
+                        )
+                        db.session.add(media_archivo)
+                    else:
+                        flash(f"Archivo '{file_storage.filename}' tiene una extensión no permitida para imágenes.", 'warning')
+            
+            # 2. URLs de Video
+            urls_video_list = request.form.getlist('urls_video') # Lista de URLs
+            descripciones_urls = request.form.getlist('descripciones_urls') # Lista de descripciones para URLs
+
+            for i, video_url_str in enumerate(urls_video_list):
+                if video_url_str.strip(): # Asegurar que la URL no esté vacía
+                    descripcion = descripciones_urls[i] if i < len(descripciones_urls) else request.form.get('descripcion_media', '') # Fallback
+
+                    media_url = ImagenVideo(
+                        Id_Discoteca=nuevo_evento.id_discoteca, # Usar el de nuevo_evento
+                        Tipo_Tabla='eventos',
+                        Id_referenciaTabla=nuevo_evento.id_evento,
+                        Descripcion=descripcion,
+                        Tipo_Archivo='video',
+                        Archivo=video_url_str.strip() # Guardar la URL completa
+                    )
+                    db.session.add(media_url)
+            # --- FIN: Manejo de Multimedia ---
+
+            db.session.commit()
+            flash('Evento creado exitosamente con multimedia!', 'success')
             return redirect(url_for('eventos.eventos_tabla'))
 
         except json.JSONDecodeError:
-            flash('Error en el formato de datos de los artistas', 'danger')
-        except ValueError as e:
-            flash(f'Error en formato de fecha/hora: {str(e)}', 'danger')
+            db.session.rollback()
+            flash('Error en el formato de datos de los artistas seleccionados (JSON).', 'danger')
+        except ValueError as ve: # ej. error en strptime
+            db.session.rollback()
+            flash(f'Error en el formato de los datos ingresados (ej. fecha/hora): {str(ve)}', 'danger')
         except Exception as e:
             db.session.rollback()
-            flash(f'Error al crear evento: {str(e)}', 'danger')
-
-        return redirect(url_for('eventos.agregar_evento'))
+            current_app.logger.error(f"Error al crear evento: {str(e)}")
+            flash(f'Ocurrió un error inesperado al crear el evento: {str(e)}', 'danger')
+        
+        # Si hubo error, recargar formulario con datos previos si es posible
+        artistas_list = Artista.query.order_by(Artista.nombre).all()
+        return render_template('Agregar_evento.html', artistas=artistas_list, 
+                                min_date=datetime.now().strftime('%Y-%m-%d'),
+                                form_data=request.form) # Re-enviar datos del form
 
     # GET: Mostrar formulario
     try:
         artistas = Artista.query.order_by(Artista.nombre).all()
-        return render_template('Agregar_evento.html', artistas=artistas, min_date=datetime.now().strftime('%Y-%m-%d'))
+        min_date_str = datetime.now().strftime('%Y-%m-%d')
+        return render_template('Agregar_evento.html', artistas=artistas, min_date=min_date_str)
     except Exception as e:
-        flash(f'Error al cargar formulario: {str(e)}', 'danger')
-        return redirect(url_for('eventos.eventos_tabla'))
+        current_app.logger.error(f"Error al cargar formulario de agregar evento: {str(e)}")
+        flash('Error al cargar el formulario para agregar evento.', 'danger')
+        return redirect(url_for('eventos.eventos_tabla')) # Redirigir a la tabla si falla la carga
 
 
 

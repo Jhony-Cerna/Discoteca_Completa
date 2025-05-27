@@ -4,18 +4,71 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Editar Bebida</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/Agregar_bebida.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/Agregar_bebida.css') }}"> <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        .media-preview-item {
+            position: relative;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px 0; /* Ajustado para apilar verticalmente si es necesario */
+            display: inline-block; /* Para que se muestren en línea con margen */
+            vertical-align: top;
+        }
+        .delete-media-btn {
+            position: absolute;
+            top: -10px; /* Ajustado para que esté más visible */
+            right: -10px; /* Ajustado */
+            background: red;
+            color: white;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px; /* Tamaño del símbolo 'x' */
+            border: none;
+            line-height: 1; /* Para centrar mejor la 'x' */
+        }
+        .preview-thumbnail {
+            max-width: 200px;
+            max-height: 150px;
+            object-fit: cover;
+            border-radius: 6px;
+            display: block; /* Para evitar espacio extra debajo si es inline */
+            margin-bottom: 5px; /* Espacio antes de la descripción */
+        }
+        .media-description {
+            font-size: 0.8em;
+            color: #555;
+            word-break: break-all; /* Para descripciones largas */
+        }
+         /* Estilos para el contenedor de multimedia */
+        .media-container {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        .media-grid { /* Para que los items se organicen mejor */
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px; /* Espacio entre items */
+        }
+    </style>
 </head>
 <body>
-
-    
-    <div class="container">
+    <div class="container mt-4">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
                         {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 {% endfor %}
             {% endif %}
@@ -23,96 +76,318 @@
 
         <h1><i class="fas fa-edit"></i> Editar Bebida</h1>
         
-        <form method="POST" action="{{ url_for('bebidas.editar_bebida', id=bebida.id_producto) }}">
-            <div class="form-column">
-                <!-- Sección Producto -->
-                <div class="form-section">
-                    <h2><i class="fas fa-wine-bottle"></i> Datos Generales</h2>
-                    <div class="form-group">
-                        <label for="nombre"><i class="fas fa-tag"></i> Nombre:</label>
-                        <input type="text" id="nombre" name="nombre" required 
-                                value="{{ producto.nombre }}"
-                                placeholder="Nombre del producto">
-                    </div>  
+        <form method="POST" action="{{ url_for('bebidas.editar_bebida', id=producto.id_producto) }}" enctype="multipart/form-data" class="form-container">
+            <input type="hidden" name="deleted_media" id="deletedMediaIds" value="">
 
-                    <div class="form-group">
-                        <label for="descripcion"><i class="fas fa-align-left"></i> Descripción:</label>
-                        <textarea id="descripcion" name="descripcion" rows="3"
-                                    placeholder="Descripción detallada">{{ producto.descripcion }}</textarea>
+            <div class="row"> <div class="col-md-6">
+                    <div class="form-section mb-3">
+                        <h2><i class="fas fa-wine-bottle"></i> Datos Generales</h2>
+                        <div class="form-group mb-2">
+                            <label for="nombre" class="form-label"><i class="fas fa-tag"></i> Nombre:</label>
+                            <input type="text" id="nombre" name="nombre" class="form-control" required 
+                                   value="{{ producto.nombre }}" placeholder="Nombre del producto">
+                        </div> 
+
+                        <div class="form-group mb-2">
+                            <label for="descripcion" class="form-label"><i class="fas fa-align-left"></i> Descripción:</label>
+                            <textarea id="descripcion" name="descripcion" class="form-control" rows="3"
+                                      placeholder="Descripción detallada">{{ producto.descripcion }}</textarea>
+                        </div>
+
+                        <div class="form-group mb-2">
+                            <label for="precio" class="form-label"><i class="fas fa-money-bill-wave"></i> Precio Regular (S/):</label>
+                            <input type="number" id="precio" name="precio" class="form-control" step="0.01" 
+                                   min="0" required value="{{ producto.precio_regular }}" placeholder="Precio actual">
+                        </div>
+
+                        <div class="form-check mb-2">
+                            <input type="checkbox" id="promocion" name="promocion" class="form-check-input"
+                                   {{ 'checked' if producto.promocion }}>
+                            <label for="promocion" class="form-check-label"><i class="fas fa-percentage"></i> Incluir en promociones</label>
+                        </div>
                     </div>
+                </div>
 
-                    <div class="form-group">
-                        <label for="precio"><i class="fas fa-money-bill-wave"></i> Precio Regular (S/):</label>
-                        <input type="number" id="precio" name="precio" step="0.01" 
-                                min="0" required 
-                                value="{{ producto.precio_regular }}"
-                                placeholder="Precio actual">
-                    </div>
+                <div class="col-md-6">
+                    <div class="form-section mb-3">
+                        <h2><i class="fas fa-info-circle"></i> Especificaciones</h2>
+                        <div class="form-group mb-2">
+                            <label for="marca" class="form-label"><i class="fas fa-industry"></i> Marca:</label>
+                            <input type="text" id="marca" name="marca" class="form-control" required 
+                                   value="{{ bebida.marca }}" placeholder="Marca de la bebida">
+                        </div>
 
-                    <div class="form-checkbox">
-                        <input type="checkbox" id="promocion" name="promocion"
-                                {{ 'checked' if producto.promocion }}>
-                        <label for="promocion"><i class="fas fa-percentage"></i> Incluir en promociones</label>
+                        <div class="form-group mb-2">
+                            <label for="tamano" class="form-label"><i class="fas fa-ruler"></i> Tamaño (litros):</label>
+                            <input type="number" id="tamano" name="tamano" class="form-control" step="0.01" 
+                                   min="0" required value="{{ bebida.tamanio }}" placeholder="Tamaño actual">
+                        </div>
+
+                        <div class="form-group mb-2">
+                            <label for="stock" class="form-label"><i class="fas fa-cubes"></i> Stock:</label>
+                            <input type="number" id="stock" name="stock" class="form-control" 
+                                   min="0" required value="{{ bebida.stock }}" placeholder="Stock actual">
+                        </div>
+
+                        <div class="form-group mb-2">
+                            <label for="categoria" class="form-label"><i class="fas fa-filter"></i> Categoría:</label>
+                            <select id="categoria" name="categoria" class="form-select" required>
+                                <option value="">Seleccione categoría...</option>
+                                {% for cat in categorias %} <option value="{{ cat.id_categoria }}"
+                                        {{ 'selected' if cat.id_categoria == bebida.id_categoria }}>
+                                    {{ cat.nombre_categoria }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="form-column">
-                <!-- Sección Bebida -->
-                <div class="form-section">
-                    <h2><i class="fas fa-info-circle"></i> Especificaciones</h2>
-                    <div class="form-group">
-                        <label for="marca"><i class="fas fa-industry"></i> Marca:</label>
-                        <input type="text" id="marca" name="marca" required 
-                                value="{{ bebida.marca }}"
-                                placeholder="Marca de la bebida">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="tamano"><i class="fas fa-ruler"></i> Tamaño (litros):</label>
-                        <input type="number" id="tamano" name="tamano" step="0.01" 
-                                min="0" required 
-                                value="{{ bebida.tamanio }}"
-                                placeholder="Tamaño actual">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="stock"><i class="fas fa-cubes"></i> Stock:</label>
-                        <input type="number" id="stock" name="stock" 
-                                min="0" required 
-                                value="{{ bebida.stock }}"
-                                placeholder="Stock actual">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="categoria"><i class="fas fa-filter"></i> Categoría:</label>
-                        <select id="categoria" name="categoria" required>
-                            <option value="">Seleccione categoría...</option>
-                            {% for categoria in categorias %}
-                            <option value="{{ categoria.id_categoria }}"
-                                {{ 'selected' if categoria.id_categoria == bebida.id_categoria }}>
-                                {{ categoria.nombre_categoria }}
-                            </option>
+            <div class="media-container">
+                <h2><i class="fas fa-photo-video"></i> Multimedia</h2>
+                
+                <div class="form-group mb-3">
+                    <label class="form-label">Multimedia Actual:</label>
+                    <div class="media-grid">
+                        {% if archivos_multimedia %}
+                            {% for media in archivos_multimedia %}
+                            <div class="media-preview-item" id="media-item-{{ media.Id_imgV }}">
+                                {% if media.Tipo_Archivo == 'imagen' %}
+                                    <img src="{{ url_for('static', filename='uploads/' + media.Archivo) if media.Archivo and not media.Archivo.startswith('http') else media.Archivo }}"
+                                         class="preview-thumbnail" alt="{{ media.Descripcion or 'Imagen' }}">
+                                {% elif media.Tipo_Archivo == 'video' %}
+                                    <iframe src="{{ media.Archivo | format_video_url if media.Archivo else '' }}" 
+                                            class="preview-thumbnail"
+                                            frameborder="0" allowfullscreen></iframe>
+                                {% endif %}
+                                <p class="media-description">{{ media.Descripcion }}</p>
+                                <button type="button" class="delete-media-btn" 
+                                        onclick="toggleDeleteMedia({{ media.Id_imgV | tojson }}, this)">×</button>
+                            </div>
                             {% endfor %}
-                        </select>
+                        {% else %}
+                            <p>No hay multimedia adjunta a esta bebida.</p>
+                        {% endif %}
                     </div>
                 </div>
-            </div>
 
-            <div class="form-footer">
-                <button type="submit" class="btn-guardar">
+                <div class="form-group mb-3">
+                    <label class="form-label">Agregar Nueva Multimedia:</label>
+                    <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#mediaModal">
+                        <i class="fas fa-plus"></i> Agregar Archivos
+                    </button>
+                    <div id="new-media-preview" class="media-grid mt-3"></div> </div>
+            </div>
+            
+            <input type="file" name="archivos" id="hiddenFileInput" multiple class="d-none">
+            <input type="hidden" name="urls_video" id="hiddenVideoUrls" value="">
+            <input type="hidden" name="descripcion_nueva_media" id="hiddenNewMediaDescription">
+
+
+            <div class="form-footer mt-3">
+                <button type="submit" class="btn btn-primary btn-guardar">
                     <i class="fas fa-save"></i> Guardar Cambios
                 </button>
-                
-                <a href="{{ url_for('bebidas.listar_bebidas') }}" class="btn-cancelar">
+                <a href="{{ url_for('bebidas.listar_bebidas') }}" class="btn btn-secondary btn-cancelar">
                     <i class="fas fa-times-circle"></i> Cancelar
                 </a>
             </div>
         </form>
     </div>
 
-    <!-- Validación de formulario -->
+    <div class="modal fade" id="mediaModal" tabindex="-1" aria-labelledby="mediaModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="mediaModalLabel">Agregar Multimedia</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="mediaDescriptionModal" class="form-label">Descripción (opcional):</label>
+                        <textarea class="form-control" id="mediaDescriptionModal" name="descripcion_media_modal"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="mediaTypeModal" class="form-label">Tipo de Archivo:</label>
+                        <select class="form-select" id="mediaTypeModal">
+                            <option value="imagen" selected>Imagen</option>
+                            <option value="video">Video (URL)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="modalFileInputGroup">
+                        <label for="fileInputModal" class="form-label">Seleccionar Archivo (para imágenes):</label>
+                        <input type="file" class="form-control" id="fileInputModal" accept="image/*" multiple> </div>
+                    <div class="mb-3 d-none" id="modalUrlInputGroup">
+                        <label for="videoUrlModal" class="form-label">URL del Video:</label>
+                        <input type="url" class="form-control" id="videoUrlModal" placeholder="https://youtube.com/watch?v=...">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="handleMediaAddition()">Agregar al Formulario</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Para el filtro format_video_url en Jinja (si no lo tienes como filtro Python)
+        // Esta función es principalmente para previsualización JS. El backend debe guardar la URL original o ya formateada.
+        function formatVideoUrl(url) {
+            if (!url) return '';
+            // YouTube: watch?v=ID -> embed/ID
+            if (url.includes('youtube.com/watch?v=')) {
+                return url.replace('watch?v=', 'embed/');
+            }
+            // YouTube Shorts: shorts/ID -> embed/ID
+            if (url.includes('youtube.com/shorts/')) {
+                return url.replace('shorts/', 'embed/');
+            }
+            // YouTu.be: youtu.be/ID -> youtube.com/embed/ID
+            if (url.includes('youtu.be/')) {
+                const videoId = url.split('youtu.be/')[1].split('?')[0];
+                return `https://www.youtube.com/embed/${videoId}`;
+            }
+            // Vimeo: vimeo.com/ID -> player.vimeo.com/video/ID
+            if (url.includes('vimeo.com/')) {
+                const videoId = url.split('vimeo.com/')[1].split('?')[0];
+                return `https://player.vimeo.com/video/${videoId}`;
+            }
+            return url; // Devuelve la URL original si no es un formato conocido o ya es embed
+        }
+        
+        // Aplicar el formateo a iframes existentes al cargar la página
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.media-preview-item iframe').forEach(iframe => {
+                const originalSrc = iframe.getAttribute('src');
+                if (originalSrc) {
+                    iframe.setAttribute('src', formatVideoUrl(originalSrc));
+                }
+            });
+
+            // Manejar cambio de tipo en el modal
+            const mediaTypeModal = document.getElementById('mediaTypeModal');
+            if (mediaTypeModal) {
+                mediaTypeModal.addEventListener('change', function(e) {
+                    document.getElementById('modalFileInputGroup').classList.toggle('d-none', e.target.value !== 'imagen');
+                    document.getElementById('modalUrlInputGroup').classList.toggle('d-none', e.target.value !== 'video');
+                });
+            }
+        });
+
+        // --- Lógica para manejar eliminación de multimedia existente ---
+        let deletedMediaIdsArray = []; // Para mantener los IDs que se van a eliminar
+
+        function toggleDeleteMedia(mediaId, buttonElement) {
+            const mediaItemDiv = buttonElement.closest('.media-preview-item');
+            const deletedIdsInput = document.getElementById('deletedMediaIds');
+            const idString = mediaId.toString();
+
+            if (deletedMediaIdsArray.includes(idString)) {
+                // Si ya está marcado, desmarcar
+                const index = deletedMediaIdsArray.indexOf(idString);
+                deletedMediaIdsArray.splice(index, 1);
+                mediaItemDiv.style.opacity = '1';
+                mediaItemDiv.style.border = '1px solid #ddd'; // Borde original
+                buttonElement.style.background = 'red'; // Color original del botón
+                 buttonElement.innerHTML = '×';
+            } else {
+                // Si no está marcado, marcar para eliminar
+                deletedMediaIdsArray.push(idString);
+                mediaItemDiv.style.opacity = '0.4';
+                mediaItemDiv.style.border = '2px dashed red';
+                buttonElement.style.background = 'grey'; // Indicar que está "deshecho"
+                buttonElement.innerHTML = '↺'; // Símbolo para deshacer
+            }
+            deletedIdsInput.value = deletedMediaIdsArray.join(',');
+            console.log('IDs marcados para eliminar:', deletedIdsInput.value);
+        }
+
+        // --- Lógica para agregar NUEVA multimedia (archivos e URLs) ---
+        const newMediaFiles = new DataTransfer(); // Para acumular archivos de imagen
+        const newMediaUrls = []; // Para acumular URLs de video
+
+        function handleMediaAddition() {
+            const mediaType = document.getElementById('mediaTypeModal').value;
+            const description = document.getElementById('mediaDescriptionModal').value; // Descripción desde el modal
+            const previewContainer = document.getElementById('new-media-preview');
+            
+            // Poblar el campo oculto para la descripción de la nueva media si es necesario
+            // Esto es una descripción general para todos los archivos nuevos agregados en esta "sesión" del modal
+            // Si necesitas descripciones por archivo, el manejo es más complejo.
+            // document.getElementById('hiddenNewMediaDescription').value = description;
+
+
+            if (mediaType === 'imagen') {
+                const fileInput = document.getElementById('fileInputModal');
+                Array.from(fileInput.files).forEach(file => {
+                    newMediaFiles.items.add(file); // Acumular en el DataTransfer
+                    
+                    // Crear previsualización
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const div = document.createElement('div');
+                        div.className = 'media-preview-item new-media'; // Marcar como nuevo
+                        div.innerHTML = `
+                            <img src="${e.target.result}" class="preview-thumbnail" alt="${description || file.name}">
+                            <p class="media-description">${description || 'Nueva imagen'}</p>
+                            <button type="button" class="delete-media-btn" onclick="removeNewMedia(this, '${file.name}', 'image')">×</button>
+                        `;
+                        previewContainer.appendChild(div);
+                    };
+                    reader.readAsDataURL(file);
+                });
+                document.getElementById('hiddenFileInput').files = newMediaFiles.files; // Actualizar el input oculto principal
+                fileInput.value = ''; // Limpiar el input del modal
+            } else if (mediaType === 'video') {
+                const videoUrl = document.getElementById('videoUrlModal').value;
+                if (videoUrl && !newMediaUrls.includes(videoUrl)) {
+                    newMediaUrls.push(videoUrl); // Acumular URL
+
+                    // Crear previsualización
+                    const div = document.createElement('div');
+                    div.className = 'media-preview-item new-media'; // Marcar como nuevo
+                    div.innerHTML = `
+                        <iframe src="${formatVideoUrl(videoUrl)}" class="preview-thumbnail" frameborder="0" allowfullscreen></iframe>
+                        <p class="media-description">${description || 'Nuevo video'}</p>
+                        <button type="button" class="delete-media-btn" onclick="removeNewMedia(this, '${videoUrl}', 'video_url')">×</button>
+                    `;
+                    previewContainer.appendChild(div);
+
+                    document.getElementById('hiddenVideoUrls').value = newMediaUrls.join(','); // Actualizar input oculto
+                }
+                document.getElementById('videoUrlModal').value = ''; // Limpiar input del modal
+            }
+            
+            document.getElementById('mediaDescriptionModal').value = ''; // Limpiar descripción del modal
+            bootstrap.Modal.getInstance(document.getElementById('mediaModal')).hide();
+        }
+
+        function removeNewMedia(buttonElement, identifier, type) {
+            buttonElement.closest('.media-preview-item').remove();
+
+            if (type === 'image') {
+                const dt = new DataTransfer();
+                Array.from(newMediaFiles.files).forEach(file => {
+                    if (file.name !== identifier) {
+                        dt.items.add(file);
+                    }
+                });
+                newMediaFiles.clearData(); // Limpiar el original
+                 Array.from(dt.files).forEach(file => newMediaFiles.items.add(file)); // Volver a llenar
+                document.getElementById('hiddenFileInput').files = newMediaFiles.files;
+            } else if (type === 'video_url') {
+                const index = newMediaUrls.indexOf(identifier);
+                if (index > -1) {
+                    newMediaUrls.splice(index, 1);
+                }
+                document.getElementById('hiddenVideoUrls').value = newMediaUrls.join(',');
+            }
+        }
+
+        // Validación de formulario (puedes mantener o expandir tu script existente)
         document.querySelector('form').addEventListener('submit', function(e) {
             const precio = parseFloat(document.getElementById('precio').value);
             const tamano = parseFloat(document.getElementById('tamano').value);
@@ -121,13 +396,13 @@
             if (precio <= 0) {
                 alert('El precio debe ser mayor a 0');
                 e.preventDefault();
+                return;
             }
-            
             if (tamano <= 0) {
                 alert('El tamaño debe ser mayor a 0');
                 e.preventDefault();
+                return;
             }
-            
             if (stock < 0) {
                 alert('El stock no puede ser negativo');
                 e.preventDefault();
