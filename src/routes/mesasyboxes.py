@@ -1,5 +1,5 @@
 import os
-from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, session, url_for
 #from src.models.media import Media  # Asegúrate de importar el modelo correcto
 from src.models.media import ImagenVideo  # Asegúrate que el modelo exista
 from src.utils.file_handling import allowed_file, secure_filename_wrapper
@@ -30,6 +30,22 @@ class Espacio(db.Model):
 
 @mesasyboxes_bp.route('/', methods=['GET'])
 def obtener_mesasyboxes():
+
+    if 'user_id' not in session or session.get('user_rol') != 'Administrador':
+        flash("Debes iniciar sesión como Administrador para acceder a esta página.", "warning")
+        return redirect(url_for('main.auth.login')) # Ajusta 'main.auth.login' a tu ruta de login
+
+    # Obtener id_discoteca de la sesión
+    id_discoteca_sesion = session.get('id_discoteca')
+
+    if id_discoteca_sesion is None:
+        # Esto no debería pasar si el login del admin fue correcto y guardó el id_discoteca
+        flash("No se pudo encontrar el ID de la discoteca asociada. Por favor, inicia sesión de nuevo.", "error")
+        return redirect(url_for('main.auth.login')) # O a una página de error/dashboard
+
+    print(f"ID de discoteca obtenido de la sesión: {id_discoteca_sesion}")
+    
+
     """Obtiene todos los productos y sus espacios y los muestra en una plantilla HTML."""
     productos = Producto.query.all()
     resultado = []
@@ -55,15 +71,40 @@ def obtener_mesasyboxes():
 
 @mesasyboxes_bp.route('/form_add_mesasyboxes', methods=['GET'])
 def agregar_mesasyboxes_form():
-    id_discoteca = 1  # Obtener este valor de la sesión o base de datos
-    return render_template('Agregar_Box.html', id_discoteca=id_discoteca)
+    # --- COMIENZO DE CAMBIOS ---
+    if 'user_id' not in session or session.get('user_rol') != 'Administrador':
+        flash("Debes iniciar sesión como Administrador para acceder a esta página.", "warning")
+        return redirect(url_for('main.auth.login'))
+
+    id_discoteca_sesion = session.get('id_discoteca')
+
+    if id_discoteca_sesion is None:
+        flash("No se pudo encontrar el ID de la discoteca asociada. Por favor, inicia sesión de nuevo.", "error")
+        return redirect(url_for('main.auth.login'))
+    
+    print(f"ID de discoteca para el formulario: {id_discoteca_sesion}")
+    # Ya no usas id_discoteca = 1, usas el de la sesión
+    return render_template('Agregar_Box.html', id_discoteca=id_discoteca_sesion)
+    # --- FIN DE CAMBIOS ---
 
 @mesasyboxes_bp.route('/add_mesasyboxes', methods=['POST'])
 def agregar_mesasyboxes():
-    try:
-        # 1. Obtener id_discoteca (valor estático temporal)
-        id_discoteca = 1  # ← Mantener este valor hasta implementar lógica real
+        # --- COMIENZO DE CAMBIOS ---
+    if 'user_id' not in session or session.get('user_rol') != 'Administrador':
+        flash("Acción no permitida. Debes iniciar sesión como Administrador.", "danger")
+        # Si es una API que devuelve JSON: return jsonify({"error": "No autorizado"}), 403
+        return redirect(url_for('main.auth.login')) # O redirigir al formulario
 
+    id_discoteca_sesion = session.get('id_discoteca')
+
+    if id_discoteca_sesion is None:
+        flash("Error de sesión: ID de discoteca no encontrado. Por favor, inicia sesión de nuevo.", "error")
+        return redirect(url_for('.agregar_mesasyboxes_form')) # Redirigir de vuelta al formulario
+    
+    print(f"ID de discoteca al agregar: {id_discoteca_sesion}")
+    # Ya no usarás id_discoteca = 1, sino id_discoteca_sesion
+    # --- FIN DE CAMBIOS ---
+    try:
         # 2. Validar campos requeridos
         required_fields = ['tipo', 'nombre', 'precio_regular']
         if not all(field in request.form for field in required_fields):
@@ -130,7 +171,7 @@ def agregar_mesasyboxes():
 
         # Ahora crea un registro de ImagenVideo POR CADA ARCHIVO
         nuevo_media = ImagenVideo(
-            Id_Discoteca=id_discoteca,
+            Id_Discoteca=id_discoteca_sesion,
             Tipo_Tabla='espacios',
             Id_referenciaTabla=nuevo_producto.id_producto,
             Descripcion=request.form.get('descripcion_media', ''),
@@ -142,7 +183,7 @@ def agregar_mesasyboxes():
 # Si quieres manejar también un posible video externo por URL:
         if request.form.get('url_video'):
             nuevo_media = ImagenVideo(
-            Id_Discoteca=id_discoteca,
+            Id_Discoteca=id_discoteca_sesion,
             Tipo_Tabla='espacios',
             Id_referenciaTabla=nuevo_producto.id_producto,
             Descripcion=request.form.get('descripcion_media', ''),
@@ -171,29 +212,110 @@ def agregar_mesasyboxes():
 
 @mesasyboxes_bp.route('/editar/<int:id_producto>', methods=['GET'])
 def editar_mesasybox(id_producto):
-    producto = Producto.query.get(id_producto)
+     # --- INICIO MODIFICACIONES ---
+    if 'user_id' not in session or session.get('user_rol') != 'Administrador':
+        flash("Debes iniciar sesión como Administrador.", "warning")
+        return redirect(url_for('main.auth.login'))
+
+    id_discoteca_sesion = session.get('id_discoteca')
+    if id_discoteca_sesion is None:
+        flash("ID de discoteca no encontrado en sesión. Por favor, inicia sesión de nuevo.", "error")
+        return redirect(url_for('main.auth.login'))
+
+    # Verificar que el producto pertenezca a la discoteca del admin
+    # Esto asume que ImagenVideo vincula el producto a la discoteca.
+    # Sería más directo si Producto tuviera un campo id_discoteca.
+    producto_pertenece = ImagenVideo.query.filter_by(
+        Id_referenciaTabla=id_producto,
+        Id_Discoteca=id_discoteca_sesion,
+        Tipo_Tabla='espacios' # o 'productos' según tu lógica
+    ).first()
+
+    producto = Producto.query.get(id_producto) # Obtener producto después de verificar pertenencia (o antes si es necesario para la verificación)
+
     if producto is None:
+        flash("Producto no encontrado.", "error")
+        return redirect(url_for('.obtener_mesasyboxes')) # O a una página 404 personalizada
+
+    if not producto_pertenece and producto: # Si el producto existe pero no pertenece a esta discoteca
+        # Una comprobación más robusta si producto no tiene id_discoteca directamente:
+        # Chequear si CUALQUIER media asociada al producto pertenece a la discoteca.
+        # Si no hay media, ¿cómo se sabe a qué discoteca pertenece el producto?
+        # IDEALMENTE: producto = Producto.query.filter_by(id_producto=id_producto, id_discoteca=id_discoteca_sesion).first()
+        # Si esto no es posible, la lógica de producto_pertenece debe ser robusta.
+        # Por ahora, si no hay media que lo vincule, y producto no tiene id_discoteca, se asume que podría no tener acceso.
+        # Esta lógica de autorización es crucial y depende de tu esquema.
+        # Si producto.id_discoteca existe:
+        # if producto.id_discoteca != id_discoteca_sesion:
+        #     flash("No tienes permiso para editar este producto.", "danger")
+        #     return redirect(url_for('.obtener_mesasyboxes'))
+        # Si se basa en ImagenVideo:
+        if not ImagenVideo.query.filter_by(Id_referenciaTabla=id_producto, Id_Discoteca=id_discoteca_sesion, Tipo_Tabla='espacios').first():
+                # Y si es un producto nuevo sin media? esta lógica puede ser compleja.
+                # Considera añadir id_discoteca a Producto.
+            pass # Por ahora, si no hay media que lo vincule directamente a esta discoteca, podría ser un problema.
+                    # Esta es una simplificación. Una mejor forma es si Producto tiene id_discoteca.
+
+    # --- FIN MODIFICACIONES ---
+
+    # producto = Producto.query.get(id_producto) # Movido arriba
+    if producto is None: # Doble check por si la lógica anterior no lo cubrió
         return "Producto no encontrado", 404
 
     espacio = Espacio.query.filter_by(id_producto=id_producto).first()
+    
+    # --- INICIO MODIFICACIONES ---
+    # Filtrar multimedia también por Id_Discoteca
     archivos_multimedia = ImagenVideo.query.filter_by(
-        Tipo_Tabla='espacios',
-        Id_referenciaTabla=id_producto
+        Tipo_Tabla='espacios', # o 'productos'
+        Id_referenciaTabla=id_producto,
+        Id_Discoteca=id_discoteca_sesion 
     ).all()
+    # --- FIN MODIFICACIONES ---
 
-    return render_template('Actualizar_Box.html', producto=producto, espacio=espacio, archivos_multimedia=archivos_multimedia)
+    return render_template('Actualizar_Box.html', 
+                            producto=producto, 
+                            espacio=espacio, 
+                            archivos_multimedia=archivos_multimedia,
+                            id_discoteca=id_discoteca_sesion # Pasar para el formulario si es necesario
+                            )
+
 
 @mesasyboxes_bp.route('/eliminar_media/<int:id_media>', methods=['POST'])
 def eliminar_media_archivo(id_media):
+    # --- INICIO MODIFICACIONES ---
+    if 'user_id' not in session or session.get('user_rol') != 'Administrador':
+        flash("Acción no permitida.", "danger")
+        return redirect(request.referrer or url_for('.obtener_mesasyboxes'))
+
+    id_discoteca_sesion = session.get('id_discoteca')
+    if id_discoteca_sesion is None:
+        flash("ID de discoteca no encontrado. Inicia sesión.", "error")
+        return redirect(request.referrer or url_for('.obtener_mesasyboxes'))
+    # --- FIN MODIFICACIONES ---
+
     if request.form.get('_method') == 'DELETE':
         try:
-            media = ImagenVideo.query.get_or_404(id_media)
+            # --- INICIO MODIFICACIONES ---
+            # Verificar que el media pertenezca a la discoteca del admin antes de obtenerlo
+            media = ImagenVideo.query.filter_by(Id_imgV=id_media, Id_Discoteca=id_discoteca_sesion).first()
+            if not media:
+                flash("Archivo multimedia no encontrado o no tienes permiso para eliminarlo.", "warning")
+                return redirect(request.referrer or url_for('.obtener_mesasyboxes'))
+            # --- FIN MODIFICACIONES ---
+            
+            # media = ImagenVideo.query.get_or_404(id_media) # Reemplazado por la consulta anterior
 
-            # Elimina el archivo físico si es imagen
-            if media.Tipo_Archivo == 'imagen':
-                ruta_archivo = os.path.join(current_app.config['UPLOAD_FOLDER'], media.Archivo)
+            # Elimina el archivo físico
+            # Asegúrate que UPLOAD_FOLDER está configurado
+            upload_folder = current_app.config.get('UPLOAD_FOLDER', 'src/static/uploads')
+            if media.Tipo_Archivo == 'imagen' and not media.Archivo.startswith(('http://', 'https://')): # No eliminar URLs externas
+                ruta_archivo = os.path.join(upload_folder, media.Archivo)
                 if os.path.exists(ruta_archivo):
                     os.remove(ruta_archivo)
+                else:
+                    current_app.logger.warning(f"Archivo físico no encontrado para eliminar: {ruta_archivo}")
+
 
             db.session.delete(media)
             db.session.commit()
@@ -201,15 +323,58 @@ def eliminar_media_archivo(id_media):
 
         except Exception as e:
             db.session.rollback()
+            current_app.logger.error(f"Error al eliminar media {id_media}: {str(e)}")
             flash(f"Error al eliminar: {str(e)}", "danger")
 
-    return redirect(request.referrer or url_for('mesasyboxes.obtener_mesasyboxes'))
+    return redirect(request.referrer or url_for('.obtener_mesasyboxes'))
 
 
 @mesasyboxes_bp.route('/<int:id_producto>', methods=['GET'])
 def obtener_mesasybox(id_producto):
     """Obtiene un producto y su espacio específico por su ID."""
-    producto = Producto.query.get(id_producto)
+
+        # --- INICIO MODIFICACIONES ---
+    # Si este endpoint es público, no se necesita autenticación.
+    # Si es solo para admins, añadir la verificación:
+    if 'user_id' not in session or session.get('user_rol') != 'Administrador':
+        return jsonify(error="No autorizado"), 403 # O 401 si es solo falta de autenticación
+
+    id_discoteca_sesion = session.get('id_discoteca')
+    if id_discoteca_sesion is None:
+        return jsonify(error="ID de discoteca no encontrado en sesión"), 401
+
+    # Verificar que el producto pertenezca a la discoteca del admin
+    # Asumiendo que Producto tiene id_discoteca o se verifica a través de ImagenVideo
+    # Ejemplo si Producto tiene id_discoteca:
+    # producto = Producto.query.filter_by(id_producto=id_producto, id_discoteca=id_discoteca_sesion).first()
+    
+    # Ejemplo si se verifica a través de ImagenVideo:
+    producto_media_link = ImagenVideo.query.filter_by(
+        Id_referenciaTabla=id_producto,
+        Id_Discoteca=id_discoteca_sesion,
+        Tipo_Tabla='espacios' # o 'productos'
+    ).first()
+
+    if not producto_media_link: # Si no hay media que lo vincule a esta discoteca
+         # Y si el producto no tiene un id_discoteca directo, podría no tener acceso.
+         # Esta lógica necesita ser robusta según tu esquema.
+        producto_directo = Producto.query.get(id_producto)
+        if not producto_directo: # El producto en sí no existe
+             return jsonify({"error": "Producto no encontrado."}), 404
+        # Si el producto existe pero no se pudo vincular a la discoteca del admin
+        # return jsonify({"error": "Acceso denegado a este producto."}), 403
+        # Por ahora, si esta es una API pública, quizás no se filtra por discoteca aquí
+        # Pero si es para el admin, SÍ se debe filtrar.
+        # Para esta demo, asumimos que si es para el admin, debe estar vinculado.
+        # Si el producto NO tiene id_discoteca, esta verificación es indirecta y puede ser falible.
+        # Considera añadir id_discoteca al modelo Producto.
+        pass # Ajustar esta lógica de autorización según el diseño.
+
+    producto = Producto.query.get(id_producto) # Obtener el producto de todas formas si la comprobación anterior es laxa.
+                                           # Si es estricta, esto ya se hizo.
+    # --- FIN MODIFICACIONES ---
+
+
     if producto is None:
         return jsonify({"error": "Producto no encontrado."}), 404
 
@@ -236,6 +401,17 @@ def actualizar_mesasybox(id_producto):
     print("🟢 Se envió el formulario correctamente.")
     print("🟢 Método detectado:", request.method)
     print("🟢 _method:", request.form.get('_method'))
+
+    # --- INICIO MODIFICACIONES ---
+    if 'user_id' not in session or session.get('user_rol') != 'Administrador':
+        flash("Acción no permitida.", "danger")
+        return redirect(url_for('main.auth.login'))
+
+    id_discoteca_sesion = session.get('id_discoteca')
+    if id_discoteca_sesion is None:
+        flash("ID de discoteca no encontrado. Inicia sesión.", "error")
+        return redirect(url_for('.editar_mesasybox', id_producto=id_producto)) # Volver al form de edición
+
 
     try:
         data = request.form
@@ -269,7 +445,15 @@ def actualizar_mesasybox(id_producto):
             media_ids_to_delete = [int(id_val) for id_val in deleted_media_ids_str.split(',') if id_val.strip()]
             
             for media_id in media_ids_to_delete:
-                media_item = ImagenVideo.query.get(media_id) # Asumiendo que Id_imgV es la PK
+
+                # --- INICIO MODIFICACIONES ---
+                # Verificar que el media_item pertenezca a la discoteca del admin
+                media_item = ImagenVideo.query.filter_by(
+                    Id_imgV=media_id, 
+                    Id_Discoteca=id_discoteca_sesion
+                ).first()
+                # --- FIN MODIFICACIONES ---
+
                 if media_item:
                     # Eliminar archivo físico si es una imagen local
                     if media_item.Tipo_Archivo == 'imagen' and \
@@ -300,7 +484,7 @@ def actualizar_mesasybox(id_producto):
                 file.save(file_path)
 
                 nueva_media = ImagenVideo(
-                    Id_Discoteca=1, # Ajusta según sea necesario
+                    Id_Discoteca=id_discoteca_sesion, # Ajusta según sea necesario
                     Tipo_Tabla='espacios',
                     Id_referenciaTabla=producto.id_producto,
                     Descripcion=data.get('descripcion_media', ''), # Asegúrate que tienes este campo o ajústalo
@@ -320,7 +504,7 @@ def actualizar_mesasybox(id_producto):
             urls_list = [url.strip() for url in nuevas_urls_video_str.split(',') if url.strip()]
             for video_url in urls_list:
                 nueva_media_video_url = ImagenVideo(
-                    Id_Discoteca=1, # Ajusta según sea necesario
+                    Id_Discoteca=id_discoteca_sesion, # Ajusta según sea necesario
                     Tipo_Tabla='espacios',
                     Id_referenciaTabla=producto.id_producto,
                     Descripcion=data.get('descripcion_media_video_url', ''), # Campo de descripción específico si es necesario
@@ -342,24 +526,77 @@ def actualizar_mesasybox(id_producto):
         return redirect(url_for('mesasyboxes.obtener_mesasyboxes')) # O como lo tenías
     
 
-@mesasyboxes_bp.route('/eliminar/<int:id_producto>', methods=['POST'])
+@mesasyboxes_bp.route('/eliminar/<int:id_producto>', methods=['POST']) # Debería ser DELETE si es una API REST pura
 def eliminar_mesasybox(id_producto):
-    if request.json.get('_method') == 'DELETE':
-        try:
-            producto = Producto.query.get_or_404(id_producto)
-            espacio = Espacio.query.filter_by(id_producto=id_producto).first()
+    # --- INICIO MODIFICACIONES ---
+    if 'user_id' not in session or session.get('user_rol') != 'Administrador':
+        return jsonify(success=False, error="No autorizado"), 403
 
-            if espacio:
-                db.session.delete(espacio)
-            db.session.delete(producto)
-            
-            db.session.commit()
-            return jsonify(success=True), 200
+    id_discoteca_sesion = session.get('id_discoteca')
+    if id_discoteca_sesion is None:
+        return jsonify(success=False, error="ID de discoteca no encontrado en sesión"), 401
+    # --- FIN MODIFICACIONES ---
 
-        except Exception as e:
-            db.session.rollback()
-            print(f"Error en la base de datos: {str(e)}")
-            return jsonify(success=False, error=str(e)), 500
+    # El frontend envía _method='DELETE' en un form, pero aquí especificas request.json.
+    # Asegúrate que el frontend envíe JSON con _method si es necesario, o ajusta la condición.
+    # Si el frontend envía un form normal con POST y un campo _method:
+    # if request.form.get('_method') == 'DELETE':
+    # Si el frontend envía JSON con _method:
+    
+    # Para este ejemplo, asumiré que el _method está en el JSON si se espera JSON.
+    # Si no, y es un POST simple, no se necesita if request.json.get('_method') == 'DELETE':
+    
+    try:
+        # --- INICIO MODIFICACIONES ---
+        # Verificar que el producto pertenezca a la discoteca del admin
+        # Si Producto tiene id_discoteca:
+        # producto = Producto.query.filter_by(id_producto=id_producto, id_discoteca=id_discoteca_sesion).first()
+        # if not producto:
+        #     return jsonify(success=False, error="Producto no encontrado o no tienes permiso."), 404
+
+        # Si se basa en ImagenVideo (menos ideal para la pertenencia del producto en sí):
+        # Esta verificación es más para la media asociada.
+        # Es mejor que Producto tenga id_discoteca.
+        producto = Producto.query.get(id_producto)
+        if not producto:
+            return jsonify(success=False, error="Producto no encontrado."), 404
+
+        # Aquí una verificación de propiedad más explícita si producto no tiene id_discoteca
+        # if not check_product_ownership(producto, id_discoteca_sesion): # función hipotética
+        #     return jsonify(success=False, error="No tienes permiso."), 403
+        # --- FIN MODIFICACIONES ---
+
+        espacio = Espacio.query.filter_by(id_producto=id_producto).first()
+
+        # Eliminar multimedia asociada al producto y a la discoteca
+        media_asociada = ImagenVideo.query.filter_by(
+            Id_referenciaTabla=id_producto,
+            Id_Discoteca=id_discoteca_sesion, # Asegurar que solo se borra media de esta discoteca
+            Tipo_Tabla='espacios' # o 'productos'
+        ).all()
+        
+        upload_folder = current_app.config.get('UPLOAD_FOLDER', 'src/static/uploads')
+        for media_item in media_asociada:
+            if media_item.Tipo_Archivo == 'imagen' and not media_item.Archivo.startswith(('http://', 'https://')):
+                ruta_archivo = os.path.join(upload_folder, media_item.Archivo)
+                if os.path.exists(ruta_archivo):
+                    try:
+                        os.remove(ruta_archivo)
+                    except Exception as e_file:
+                            current_app.logger.error(f"Error al eliminar archivo físico {media_item.Archivo} durante borrado de producto: {str(e_file)}")
+            db.session.delete(media_item)
+
+        if espacio:
+            db.session.delete(espacio)
+        db.session.delete(producto) # `producto` ya fue obtenido y verificado (o debería haber sido)
+        
+        db.session.commit()
+        return jsonify(success=True, message="Producto y elementos asociados eliminados."), 200
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error en la base de datos al eliminar producto {id_producto}: {str(e)}", exc_info=True)
+        return jsonify(success=False, error=str(e)), 500
         
 
 

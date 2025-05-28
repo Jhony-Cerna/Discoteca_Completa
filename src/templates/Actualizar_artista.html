@@ -3,46 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Actualizar Artista</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/artistas.css') }}">
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <title>Actualizar Artista - {{ artista.nombre }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        .preview-item img, .preview-item iframe {
+            width: 150px;
+            height: 100px;
+            object-fit: cover;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            margin: 5px; /* Pequeño margen entre ítems */
+        }
+        .preview-item .btn-close { /* Estilo para el botón de cierre en previews */
+            position: absolute;
+            top: -5px; 
+            right: -5px;
+            background: rgba(255,255,255,0.9) !important; /* Fondo para visibilidad */
+            border-radius: 50%;
+            padding: 0.2rem 0.4rem; /* Ajuste de tamaño */
+            box-shadow: 0 0 5px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+        .preview-item iframe {
+            border: none;
+        }
+        .card-header.bg-primary { /* Estilo original de tu formulario de edición */
+            background-color: #007bff !important;
+        }
+        .marked-for-deletion {
+            opacity: 0.5;
+            border: 2px dashed red; /* Opcional: para destacar más los marcados para eliminar */
+        }
+    </style>
 </head>
 <body>
-    <div class="container mt-5">
+    <div class="container mt-5 mb-5">
         <div class="card shadow-lg">
             <div class="card-header bg-primary text-white">
-                <h1 class="card-title mb-0">Actualizar Artista</h1>
+                <h1 class="card-title mb-0">Actualizar Artista: {{ artista.nombre }}</h1>
             </div>
             
             <div class="card-body">
-                <!-- Mensajes Flash -->
                 {% with messages = get_flashed_messages(with_categories=true) %}
                     {% if messages %}
                         {% for category, message in messages %}
-                            <div class="alert alert-{{ category }} alert-dismissible fade show">
+                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
                                 {{ message }}
-                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                    <span aria-hidden="true">&times;</span>
-                                </button>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                             </div>
                         {% endfor %}
                     {% endif %}
                 {% endwith %}
 
-                <form method="POST" action="{{ url_for('artistas.actualizar_artista', id_artista=artista.id_artista) }}">
+                <form id="artistaFormActualizar" method="POST" 
+                      action="{{ url_for('artistas.actualizar_artista', id_artista=artista.id_artista) }}" 
+                      enctype="multipart/form-data">
                     
                     <input type="hidden" name="next" value="{{ next | safe }}">
-                    
-                    <div class="form-group">
-                        <label for="nombre">Nombre Artístico</label>
+                    <input type="hidden" name="urls_video_nuevas" id="urls_video_nuevas_hidden">
+                    <input type="hidden" name="descripcion_media_archivos_nuevos" id="descripcion_media_archivos_nuevos_hidden">
+                    <input type="hidden" name="descripcion_media_urls_nuevas" id="descripcion_media_urls_nuevas_hidden">
+                    <input type="hidden" name="media_a_eliminar_ids" id="media_a_eliminar_ids_hidden">
+
+                    <input type="file" name="archivos_nuevos" id="real_archivos_nuevos_input" multiple style="display: none;">
+
+                    <div class="mb-3">
+                        <label for="nombre" class="form-label">Nombre Artístico *</label>
                         <input type="text" class="form-control" id="nombre" name="nombre" 
-                            value="{{ artista.nombre }}" required>
+                               value="{{ artista.nombre }}" required>
                     </div>
 
-                    <div class="form-group">
-                        <label for="genero_musical">Género Musical</label>
-                        <select class="form-control" id="genero_musical" name="genero_musical" required>
+                    <div class="mb-3">
+                        <label for="genero_musical" class="form-label">Género Musical *</label>
+                        <select class="form-select" id="genero_musical" name="genero_musical" required>
                             <option value="">Seleccione un género</option>
                             {% for genero in generos %}
                                 <option value="{{ genero }}" 
@@ -53,87 +87,388 @@
                         </select>
                     </div>
 
-                    <div class="form-group">
-                        <label for="descripcion">Descripción</label>
+                    <div class="mb-3">
+                        <label for="descripcion" class="form-label">Descripción *</label>
                         <textarea class="form-control" id="descripcion" name="descripcion" 
-                            rows="4" required>{{ artista.descripcion }}</textarea>
+                                  rows="4" required>{{ artista.descripcion }}</textarea>
                     </div>
 
-                    <div class="form-group text-right">
-                        <button type="submit" class="btn btn-primary btn-lg">
-                            <i class="fas fa-save"></i> Actualizar
+                    <div class="mb-4 border p-3 rounded">
+                        <h4 class="mb-3">Multimedia del Artista</h4>
+                        
+                        <h5>Multimedia Existente</h5>
+                        <div id="existing-media-preview" class="mt-2 d-flex flex-wrap gap-2 align-items-start">
+                            {% if media_items %}
+                                {% for item in media_items %}
+                                <div class="preview-item position-relative text-center" id="media-item-{{ item.id_imagen_video }}" data-media-id="{{ item.id_imagen_video }}">
+                                    {% if item.tipo_archivo == 'imagen' %}
+                                        <img src="{{ item.display_url }}" alt="{{ item.descripcion or 'Imagen' }}">
+                                    {% elif item.tipo_archivo == 'video' %}
+                                        <iframe data-original-url="{{ item.display_url }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    {% endif %}
+                                    <button type="button" class="btn-close" 
+                                            title="Marcar para eliminar"
+                                            aria-label="Marcar para eliminar este ítem" 
+                                            onclick="marcarParaEliminarExistente(this, {{ item.id_imagen_video }})"></button>
+                                    {% if item.descripcion %}
+                                        <p class="small text-muted mt-1" style="font-size: 0.75rem; width: 150px; word-wrap: break-word;">{{ item.descripcion }}</p>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <p class="text-muted">No hay multimedia existente para este artista.</p>
+                            {% endif %}
+                        </div>
+                        
+                        <hr class="my-4"/>
+                        
+                        <h5>Agregar Nueva Multimedia</h5>
+                        <button type="button" class="btn btn-secondary btn-sm mb-2" data-bs-toggle="modal" data-bs-target="#mediaModalNuevo">
+                            <i class="fas fa-plus"></i> Agregar Nuevos Archivos/URLs
                         </button>
-                        <a href="{{ url_for('artistas.artistas') }}" class="btn btn-secondary btn-lg">
+                        
+                        <div id="new-file-preview" class="mt-2 d-flex flex-wrap gap-2 align-items-start">
+                            </div>
+                        <div id="limite-alerta-general" class="text-danger small mt-2"></div>
+                    </div>
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-3">
+                        <a href="{{ url_for('redes.agregar_red_social', id_artista=artista.id_artista) }}?next={{ request.url | urlencode }}" 
+                           class="btn btn-info btn-lg me-md-2"> <i class="fas fa-share-alt"></i> Redes Sociales
+                        </a>
+                        <a href="{{ next if next and next != url_for('artistas.artistas') else url_for('artistas.artistas') }}" class="btn btn-secondary btn-lg me-md-2">
                             <i class="fas fa-times"></i> Cancelar
                         </a>
-                        <a href="{{ url_for('redes.agregar_red_social', id_artista=artista.id_artista) }}?next={{ request.url | urlencode }}" 
-                            class="btn btn-info btn-lg">
-                            <i class="fas fa-share-alt"></i> Redes Sociales
-                        </a>
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-save"></i> Actualizar Artista
+                        </button>
                     </div>
-                </form>
+                </form> <div class="modal fade" id="mediaModalNuevo" tabindex="-1" aria-labelledby="mediaModalNuevoLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="mediaModalNuevoLabel">Agregar Nuevo Ítem Multimedia</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label for="descripcion_modal_nuevo_input" class="form-label">Descripción (opcional para este lote)</label>
+                                    <textarea class="form-control" id="descripcion_modal_nuevo_input"></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="tipo_contenido_modal_nuevo_select" class="form-label">Tipo de contenido</label>
+                                    <select class="form-select" id="tipo_contenido_modal_nuevo_select">
+                                        <option value="imagen">Imagen</option>
+                                        <option value="video">Video (URL)</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3" id="grupo_imagenes_modal_nuevo">
+                                    <label for="input_archivos_modal_nuevos" class="form-label">Subir imágenes (máx. 4 en total)</label>
+                                    <input type="file" class="form-control" id="input_archivos_modal_nuevos" accept="image/*" multiple>
+                                </div>
+                                <div class="mb-3 d-none" id="grupo_videos_modal_nuevo">
+                                    <label for="input_url_modal_nuevo" class="form-label">URL de YouTube/Vimeo</label>
+                                    <input type="url" class="form-control" id="input_url_modal_nuevo" placeholder="Ej: https://www.youtube.com/watch?v=...">
+                                </div>
+                                <div id="modal-alerta-nuevo" class="text-danger small mt-2"></div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                <button type="button" class="btn btn-primary" onclick="agregarMultimediaNuevaDesdeModal()">Agregar Ítem(s)</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                <!-- Sección de Redes Sociales -->
-                <div class="mt-4">
+                <div class="mt-5">
                     <h4>Redes Sociales Registradas</h4>
                     <div class="list-group">
-                        {% for red in artista.redes_sociales %}
-                            <div class="list-group-item">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <h5 class="mb-1">{{ red.detalle.tipo_link }}</h5>
-                                        <a href="{{ red.detalle.url }}" target="_blank" class="text-break">
-                                            {{ red.detalle.url }}
-                                        </a>
-                                        {% if red.detalle.descripcion %}
-                                            <p class="mb-0 mt-1">{{ red.detalle.descripcion }}</p>
-                                        {% endif %}
-                                    </div>
-                                    <div>
-                                        <a href="{{ url_for('redes.eliminar_red_social', id_red=red.id_link) }}?next={{ request.url | urlencode }}" 
-                                            class="btn btn-danger btn-sm"
-                                            onclick="return confirm('¿Seguro que deseas eliminar esta red social?')">
-                                            <i class="fas fa-trash"></i>
-                                        </a>
-                                    </div>
+                        {% for red_social_item in artista.redes_sociales %}
+                        <div class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="mb-1">{{ red_social_item.detalle.tipo_link }}</h5>
+                                    <a href="{{ red_social_item.detalle.url }}" target="_blank" class="text-break">
+                                        {{ red_social_item.detalle.url }}
+                                    </a>
+                                    {% if red_social_item.detalle.descripcion %}
+                                        <p class="mb-0 mt-1 text-muted">{{ red_social_item.detalle.descripcion }}</p>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <a href="{{ url_for('redes.eliminar_red_social', id_red=red_social_item.id_link) }}?next={{ request.url | urlencode }}" 
+                                       class="btn btn-danger btn-sm"
+                                       onclick="return confirm('¿Seguro que deseas eliminar esta red social?')">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
                                 </div>
                             </div>
+                        </div>
                         {% else %}
-                            <div class="alert alert-info mb-0">No hay redes sociales registradas</div>
+                        <div class="alert alert-info mb-0">No hay redes sociales registradas para este artista.</div>
                         {% endfor %}
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Scripts -->
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+            </div> </div> </div> <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-    // Manejo de parámetros URL codificados
-    (function() {
-        const decodeNextParam = () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            let nextParam = urlParams.get('next');
-            
-            if (nextParam) {
-                try {
-                    // Decodificar máximo 2 veces para evitar doble codificación
-                    let decoded = decodeURIComponent(nextParam);
-                    if (decoded.includes('%')) {
-                        decoded = decodeURIComponent(decoded);
+        const MAX_TOTAL_IMAGENES = 4; 
+        let nuevasUrlsVideoArray = []; 
+        let mediaIdsAEliminarSet = new Set();
+        let archivosNuevosParaFormulario = new DataTransfer(); // Almacén global para archivos seleccionados en el modal
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('#existing-media-preview .preview-item iframe').forEach(iframe => {
+                const originalUrl = iframe.dataset.originalUrl;
+                if (originalUrl) {
+                    const iframeTagHTML = formatearURLVideo(originalUrl); 
+                    if (iframeTagHTML) {
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = iframeTagHTML;
+                        const newIframeSrc = tempDiv.firstChild.src;
+                        if(newIframeSrc) iframe.src = newIframeSrc;
+                    } else {
+                        iframe.parentElement.innerHTML += '<p class="text-danger small">URL de video no válida.</p>';
                     }
-                    document.querySelector('input[name="next"]').value = decoded;
-                } catch(e) {
-                    console.error('Error decoding URL:', e);
+                }
+            });
+
+            const tipoContenidoModalNuevoSelect = document.getElementById('tipo_contenido_modal_nuevo_select');
+            if(tipoContenidoModalNuevoSelect) {
+                tipoContenidoModalNuevoSelect.addEventListener('change', function(e) {
+                    document.getElementById('grupo_imagenes_modal_nuevo').classList.toggle('d-none', e.target.value !== 'imagen');
+                    document.getElementById('grupo_videos_modal_nuevo').classList.toggle('d-none', e.target.value !== 'video');
+                });
+            }
+            
+            const mediaModalNuevoEl = document.getElementById('mediaModalNuevo');
+            if (mediaModalNuevoEl) {
+                mediaModalNuevoEl.addEventListener('hidden.bs.modal', function () {
+                    document.getElementById('descripcion_modal_nuevo_input').value = '';
+                    document.getElementById('input_archivos_modal_nuevos').value = ''; 
+                    document.getElementById('input_url_modal_nuevo').value = '';
+                    document.getElementById('modal-alerta-nuevo').textContent = '';
+                });
+            }
+
+            const decodeNextParam = () => {
+                const urlParams = new URLSearchParams(window.location.search);
+                let nextParam = urlParams.get('next');
+                if (nextParam) {
+                    try {
+                        let decoded = decodeURIComponent(nextParam);
+                        if (decoded.includes('%')) { decoded = decodeURIComponent(decoded); }
+                        const nextInput = document.querySelector('input[name="next"]');
+                        if(nextInput) nextInput.value = decoded;
+                    } catch(e) { console.error('Error decoding URL for next param:', e); }
+                }
+            };
+            decodeNextParam();
+
+            // Event listener para el envío del formulario principal
+            const formActualizar = document.getElementById('artistaFormActualizar');
+            if (formActualizar) {
+                formActualizar.addEventListener('submit', function(event) {
+                    const inputRealArchivos = document.getElementById('real_archivos_nuevos_input');
+                    if (inputRealArchivos && archivosNuevosParaFormulario.files.length > 0) {
+                        inputRealArchivos.files = archivosNuevosParaFormulario.files;
+                    }
+                    // Los campos hidden para descripciones y URLs ya se actualizan dinámicamente
+                    // y media_a_eliminar_ids_hidden también.
+                });
+            }
+        });
+
+        function contarImagenesActuales() {
+            const existingImages = document.querySelectorAll('#existing-media-preview .preview-item img:not(.marked-for-deletion)').length;
+            // Contar desde archivosNuevosParaFormulario en lugar de previews, ya que es la fuente de verdad
+            const newImagesCount = archivosNuevosParaFormulario.files.length;
+            return existingImages + newImagesCount;
+        }
+        
+        function formatearURLVideo(url) { 
+            let videoId;
+            let embedUrl = null;
+            const youtubePatterns = [
+                /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+                /(?:https?:\/\/)?(?:m\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/
+            ];
+            for (const pattern of youtubePatterns) {
+                const match = url.match(pattern);
+                if (match && match[1]) {
+                    videoId = match[1];
+                    embedUrl = `https://www.youtube.com/embed/$${videoId}`;
+                    break;
                 }
             }
-        };
-        
-        document.addEventListener('DOMContentLoaded', decodeNextParam);
-    })();
+            if (!embedUrl) {
+                const vimeoPattern = /(?:https?:\/\/)?(?:www\.)?vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/([^\/]*)\/videos\/|)(\d+)/;
+                const match = url.match(vimeoPattern);
+                if (match && match[2]) {
+                    videoId = match[2];
+                    embedUrl = `https://player.vimeo.com/video/${videoId}`;
+                }
+            }
+            if (embedUrl) {
+                return `<iframe src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+            }
+            console.warn("URL de video no compatible para previsualización de iframe:", url);
+            return null;
+        }
+
+        function marcarParaEliminarExistente(buttonElement, mediaId) {
+            const itemPreview = document.getElementById(`media-item-${mediaId}`);
+            if (itemPreview) {
+                const isImage = itemPreview.querySelector('img') !== null; // Para saber si es imagen
+
+                if (mediaIdsAEliminarSet.has(mediaId)) { 
+                    mediaIdsAEliminarSet.delete(mediaId);
+                    itemPreview.classList.remove('marked-for-deletion');
+                    buttonElement.setAttribute('title', 'Marcar para eliminar');
+                    buttonElement.innerHTML = ''; // O restaurar el ícono de "x"
+                } else { 
+                    mediaIdsAEliminarSet.add(mediaId);
+                    itemPreview.classList.add('marked-for-deletion');
+                    buttonElement.setAttribute('title', 'Cancelar eliminación');
+                    buttonElement.innerHTML = '<i class="fas fa-undo"></i>'; 
+                }
+                document.getElementById('media_a_eliminar_ids_hidden').value = Array.from(mediaIdsAEliminarSet).join(',');
+                
+                if (isImage) { // Solo recalcular límite de imágenes si se marcó/desmarcó una imagen
+                    document.getElementById('limite-alerta-general').textContent = '';
+                    contarImagenesActuales(); // Actualiza el conteo (aunque el resultado no se usa aquí directamente, es bueno llamarlo)
+                }
+            }
+        }
+
+        function agregarMultimediaNuevaDesdeModal() {
+            const tipo = document.getElementById('tipo_contenido_modal_nuevo_select').value;
+            const descripcionInput = document.getElementById('descripcion_modal_nuevo_input');
+            const descripcion = descripcionInput ? descripcionInput.value.trim() : '';
+            
+            const previewContainerNuevos = document.getElementById('new-file-preview');
+            const modalAlerta = document.getElementById('modal-alerta-nuevo');
+            const limiteAlertaGeneralEl = document.getElementById('limite-alerta-general');
+            
+            const mediaModalInstance = bootstrap.Modal.getInstance(document.getElementById('mediaModalNuevo'));
+
+            modalAlerta.textContent = '';
+            limiteAlertaGeneralEl.textContent = '';
+            
+            if (tipo === 'imagen') {
+                const inputArchivosModal = document.getElementById('input_archivos_modal_nuevos');
+                const archivosDelModal = inputArchivosModal.files; 
+                
+                if (contarImagenesActuales() + archivosDelModal.length > MAX_TOTAL_IMAGENES) {
+                    const msg = `Máximo total: ${MAX_TOTAL_IMAGENES} imágenes. Ya hay ${contarImagenesActuales()} (existentes no eliminadas + nuevas en cola).`;
+                    modalAlerta.textContent = msg;
+                    limiteAlertaGeneralEl.textContent = msg;
+                    return;
+                }
+
+                Array.from(archivosDelModal).forEach(archivo => {
+                    archivosNuevosParaFormulario.items.add(archivo); // Clave: agregar al DataTransfer
+
+                    const reader = new FileReader();
+                    reader.onload = function(e_reader) {
+                        const div = document.createElement('div');
+                        div.className = 'preview-item position-relative text-center';
+                        const tempId = `new-file-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+                        div.id = tempId;
+                        div.dataset.filename = archivo.name; 
+
+                        div.innerHTML = `
+                            <img src="${e_reader.target.result}" alt="${archivo.name}">
+                            <button type="button" class="btn-close" aria-label="Remover nueva imagen" 
+                                    onclick="removerPreviewNuevo('${tempId}', '${archivo.name}', 'image')"></button>
+                            ${descripcion ? `<p class="small text-muted mt-1" style="font-size: 0.75rem; width: 150px; word-wrap: break-word;">${descripcion}</p>` : ''}
+                        `;
+                        previewContainerNuevos.appendChild(div);
+                    };
+                    reader.readAsDataURL(archivo);
+                });
+                
+                if (archivosDelModal.length > 0 && descripcion) {
+                    const descArchivosActual = document.getElementById('descripcion_media_archivos_nuevos_hidden').value;
+                    document.getElementById('descripcion_media_archivos_nuevos_hidden').value = descArchivosActual ? `${descArchivosActual}; ${descripcion}`.trim() : descripcion;
+                }
+                
+                inputArchivosModal.value = ''; // Limpiar el input de archivos del modal
+
+            } else if (tipo === 'video') {
+                const urlInputModal = document.getElementById('input_url_modal_nuevo');
+                const url = urlInputModal.value.trim();
+                
+                if (!url) {
+                    modalAlerta.textContent = 'Ingrese una URL de video válida.'; return;
+                }
+                const esDuplicadoExistente = Array.from(document.querySelectorAll('#existing-media-preview .preview-item:not(.marked-for-deletion) iframe'))
+                                              .some(iframe => iframe.dataset.originalUrl === url);
+                if (nuevasUrlsVideoArray.includes(url) || esDuplicadoExistente) {
+                    modalAlerta.textContent = 'Esta URL de video ya fue agregada o ya existe.'; return;
+                }
+
+                const iframeHTML = formatearURLVideo(url);
+                if (!iframeHTML) {
+                    modalAlerta.textContent = 'URL de video no reconocida o no soportada para previsualización.'; return;
+                }
+                const tempIdVideo = `new-video-${Date.now()}`;
+                const div = document.createElement('div');
+                div.className = 'preview-item position-relative text-center';
+                div.id = tempIdVideo;
+                div.innerHTML = `
+                    ${iframeHTML}
+                    <button type="button" class="btn-close" aria-label="Remover nuevo video"
+                            onclick="removerPreviewNuevo('${tempIdVideo}', '${url}', 'video')"></button>
+                    ${descripcion ? `<p class="small text-muted mt-1" style="font-size: 0.75rem; width: 150px; word-wrap: break-word;">${descripcion}</p>` : ''}
+                `;
+                previewContainerNuevos.appendChild(div);
+
+                nuevasUrlsVideoArray.push(url);
+                document.getElementById('urls_video_nuevas_hidden').value = nuevasUrlsVideoArray.join('\n'); // Usar salto de línea como separador
+                
+                if (descripcion) {
+                    const descUrlsActual = document.getElementById('descripcion_media_urls_nuevas_hidden').value;
+                    document.getElementById('descripcion_media_urls_nuevas_hidden').value = descUrlsActual ? `${descUrlsActual}; ${descripcion}`.trim() : descripcion;
+                }
+                urlInputModal.value = ''; 
+            }
+
+            if (!modalAlerta.textContent) { 
+                if(descripcionInput) descripcionInput.value = ''; 
+                mediaModalInstance.hide();
+            }
+        }
+
+        function removerPreviewNuevo(elementId, identifier, type) {
+            const previewElement = document.getElementById(elementId);
+            if (previewElement) {
+                previewElement.remove();
+            }
+
+            if (type === 'video') {
+                nuevasUrlsVideoArray = nuevasUrlsVideoArray.filter(url => url !== identifier);
+                document.getElementById('urls_video_nuevas_hidden').value = nuevasUrlsVideoArray.join('\n');
+                if (nuevasUrlsVideoArray.length === 0) { // Si no hay más URLs, limpiar su descripción
+                     document.getElementById('descripcion_media_urls_nuevas_hidden').value = ''; 
+                }
+            } else if (type === 'image') {
+                const filenameToRemove = identifier; 
+                const dt = new DataTransfer();
+                for(let i=0; i < archivosNuevosParaFormulario.files.length; i++) {
+                    if(archivosNuevosParaFormulario.files[i].name !== filenameToRemove) {
+                        dt.items.add(archivosNuevosParaFormulario.files[i]);
+                    }
+                }
+                archivosNuevosParaFormulario = dt; 
+                
+                // Si no quedan archivos nuevos, y se había puesto una descripción para el lote, limpiarla
+                if (archivosNuevosParaFormulario.files.length === 0) {
+                    document.getElementById('descripcion_media_archivos_nuevos_hidden').value = '';
+                }
+                
+                document.getElementById('limite-alerta-general').textContent = '';
+                contarImagenesActuales(); // Actualizar conteo
+            }
+        }
     </script>
 </body>
 </html>
